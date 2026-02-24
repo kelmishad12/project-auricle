@@ -5,8 +5,8 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 
 from src.core.nodes import fetch_calendar, fetch_emails, reflexion_loop, synthesize_briefing
+from src.core.state import AgentState
 from src.services.google import CalendarProvider, MailProvider
-from .state import AgentState
 
 class AuricleGraph:
     """Supervisor and Node definitions. Pure LangGraph logic."""

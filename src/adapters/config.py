@@ -2,8 +2,10 @@
 Configuration adapter for dependency injection.
 """
 from typing import Dict, Any
-from .google_workspace import GoogleWorkspaceAdapter
-from .localmock import MockMailAdapter, MockCalendarAdapter
+
+from src.adapters.google_workspace import GoogleWorkspaceAdapter
+# pylint: disable=import-error
+from src.adapters.localmock import MockMailAdapter, MockCalendarAdapter
 
 def get_providers(env: str = "dev") -> Dict[str, Any]:
     """

@@ -3,8 +3,10 @@ Tests for LangGraph logic.
 """
 # pylint: disable=duplicate-code
 import pytest
+
+# pylint: disable=import-error,no-name-in-module
+from src.adapters.localmock import MockCalendarAdapter, MockMailAdapter
 from src.core.graph import AuricleGraph
-from src.adapters.localmock import MockMailAdapter, MockCalendarAdapter
 
 @pytest.mark.asyncio
 async def test_graph_initializes():
