@@ -1,0 +1,5 @@
+[MASTER]
+disable=
+    fixme,
+    too-few-public-methods,
+    duplicate-code

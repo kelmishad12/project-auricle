@@ -1,3 +1,6 @@
+"""
+Configuration adapter for dependency injection.
+"""
 from typing import Dict, Any
 from .google_workspace import GoogleWorkspaceAdapter
 from .localmock import MockMailAdapter, MockCalendarAdapter
@@ -13,9 +16,9 @@ def get_providers(env: str = "dev") -> Dict[str, Any]:
             # "cal_provider": GoogleWorkspaceAdapter() # Will be implemented later in same file
             "cal_provider": MockCalendarAdapter() 
         }
-    else:
-        # Default to dev environment -> Local mocks
-        return {
-            "mail_provider": MockMailAdapter(),
-            "cal_provider": MockCalendarAdapter()
-        }
+
+    # Default to dev environment -> Local mocks
+    return {
+        "mail_provider": MockMailAdapter(),
+        "cal_provider": MockCalendarAdapter()
+    }

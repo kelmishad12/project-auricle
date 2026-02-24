@@ -1,3 +1,6 @@
+"""
+State definition for LangGraph.
+"""
 from typing import TypedDict, Annotated, Sequence
 import operator
 from langchain_core.messages import BaseMessage

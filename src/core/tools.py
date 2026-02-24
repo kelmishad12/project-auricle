@@ -1,3 +1,6 @@
+"""
+Tools definition for the LangGraph agent.
+"""
 from langchain_core.tools import tool
 
 @tool
