@@ -15,7 +15,7 @@ Project Auricle serves as a comprehensive architectural blueprint and implementa
 │    │    ├── nodes.py   # LangGraph Node definitions
 │    │    └── tools.py   # Extracted tools for LLM use
 │    ├── /services   # Concrete Services and Google integrations
-│    │    ├── google.py
+│    │    ├── google.py      # Google Services provider protocols
 │    │    ├── gemini.py      # Gemini 1.5 Flash Integration
 │    │    └── elevenlabs.py  # ElevenLabs Text-to-Speech
 │    ├── /adapters   # Concrete Implementations & Config
