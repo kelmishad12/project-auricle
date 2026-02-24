@@ -1,0 +1,9 @@
+# Project Auricle GitIgnore
+__pycache__/
+*.pyc
+.env
+venv/
+env/
+
+# Private implementations
+src/adapters/localmock.py
