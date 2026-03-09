@@ -1,8 +1,11 @@
 """
 LangGraph orchestration for the Project Auricle.
 """
+import os
+
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
+from langgraph.checkpoint.memory import MemorySaver
 
 from src.core.nodes import fetch_calendar, fetch_emails, reflexion_loop, synthesize_briefing
 from src.core.state import AgentState
@@ -31,15 +34,35 @@ class AuricleGraph:
         workflow.add_edge("synthesize_briefing", "reflexion_loop")
         workflow.add_edge("reflexion_loop", END)
 
-        # TODO: [Critique Issue] Postgres stateless fix: add checkpointer=...
-        self.app = workflow.compile()
+        # Setup state persistence
+        db_url = os.environ.get("DATABASE_URL")
+        checkpointer = None
 
-    async def ainvoke(self, input_state: dict):
+        if db_url:
+            try:
+                # pylint: disable=import-outside-toplevel
+                from langgraph.checkpoint.postgres import PostgresSaver
+                from psycopg import Connection
+                # Note: For production, use pooling. Single connection here for simplicity
+                self.conn = Connection.connect(db_url)
+                checkpointer = PostgresSaver(self.conn)
+                checkpointer.setup()
+                print("✅ PostgresSaver initialized successfully.")
+            except Exception as e: # pylint: disable=broad-exception-caught
+                print(f"⚠️ Failed to connect to Postgres ({e}). Falling back to MemorySaver.")
+                checkpointer = MemorySaver()
+        else:
+            checkpointer = MemorySaver()
+
+        self.app = workflow.compile(checkpointer=checkpointer)
+
+    async def ainvoke(self, input_state: dict, thread_id: str = "default"):
         """Run the orchestrated graph asynchronously with injected dependencies."""
         config = RunnableConfig(
             configurable={
                 "mail_provider": self.mail_provider,
-                "cal_provider": self.cal_provider
+                "cal_provider": self.cal_provider,
+                "thread_id": thread_id
             }
         )
         return await self.app.ainvoke(input_state, config=config)

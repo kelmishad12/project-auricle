@@ -5,6 +5,7 @@ from langchain_core.runnables import RunnableConfig
 
 from src.core.state import AgentState
 from src.services.google import CalendarProvider, MailProvider
+from src.services.gemini import GeminiService
 
 def get_mail_provider(config: RunnableConfig) -> MailProvider:
     """Extract MailProvider from config."""
@@ -26,11 +27,30 @@ async def fetch_calendar(_state: AgentState, config: RunnableConfig):
     events = await cal_provider.get_upcoming_events(days=1)
     return {"calendar_events": [f"Event: {e['title']} at {e['time']}" for e in events]}
 
-async def synthesize_briefing(_state: AgentState, _config: RunnableConfig):
+# pylint: disable=unused-argument
+async def synthesize_briefing(state: AgentState, config: RunnableConfig):
     """Synthesize the final briefing contextually."""
-    # TODO: [Critique Issue] Wire into src.services.gemini.py
-    return {"briefing": "Today's briefing synthesized from events and emails..."}
+    gemini = GeminiService()
 
-async def reflexion_loop(_state: AgentState, _config: RunnableConfig):
+    prompt = (
+        "You are an AI Executive Assistant. Create a concise, professional daily briefing "
+        "using the following data. Keep it under 5 minutes when spoken.\\n\\n"
+        f"Emails:\\n{chr(10).join(state.get('email_summaries', []))}\\n\\n"
+        f"Calendar:\\n{chr(10).join(state.get('calendar_events', []))}\\n"
+    )
+
+    briefing = gemini.generate_content(prompt)
+    return {"briefing": briefing}
+
+# pylint: disable=unused-argument
+async def reflexion_loop(state: AgentState, config: RunnableConfig):
     """Enforce strict Safety/Privacy protocols via a Reflexion loop."""
-    return {"safety_check_passed": True}
+    gemini = GeminiService()
+
+    analysis = gemini.analyze_context(state.get('briefing', ''))
+
+    safety_passed = analysis.get("safety_passed", False)
+    if not safety_passed:
+        print(f"[Reflexion] Safety Warning: {analysis.get('reasoning')}")
+
+    return {"safety_check_passed": safety_passed}

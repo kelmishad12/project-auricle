@@ -3,7 +3,7 @@ Configuration adapter for dependency injection.
 """
 from typing import Dict, Any
 
-from src.adapters.google_workspace import GoogleWorkspaceAdapter
+from src.services.google import GoogleWorkspaceService
 # pylint: disable=import-error,no-name-in-module
 from src.adapters.localmock import MockCalendarAdapter, MockMailAdapter
 
@@ -13,10 +13,10 @@ def get_providers(env: str = "dev") -> Dict[str, Any]:
     Return configured providers based on the targeted environment.
     """
     if env == "prod":
+        adapter = GoogleWorkspaceService()
         return {
-            "mail_provider": GoogleWorkspaceAdapter(),
-            # "cal_provider": GoogleWorkspaceAdapter() # Will be implemented later in same file
-            "cal_provider": MockCalendarAdapter() 
+            "mail_provider": adapter,
+            "cal_provider": adapter
         }
 
     # Default to dev environment -> Local mocks

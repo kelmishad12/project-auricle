@@ -4,11 +4,14 @@ Provides agentic API for contextual briefings.
 """
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 from src.adapters.config import get_providers
 from src.core.graph import AuricleGraph
+
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):

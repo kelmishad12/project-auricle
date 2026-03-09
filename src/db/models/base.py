@@ -1,5 +1,12 @@
 """
 Database models for Project Auricle.
+
+NOTE ON STATE PERSISTENCE:
+These SQLAlchemy models are used for long-term application data (e.g., user preferences
+and historical logs of generated briefings). 
+They do NOT store the LangGraph AgentState. LangGraph's state persistence (which tracks
+the mid-execution memory of the underlying agent) is handled automatically by 
+`langgraph.checkpoint.postgres` using its own hidden Postgres tables managed in `src/core/graph.py`.
 """
 from datetime import datetime
 

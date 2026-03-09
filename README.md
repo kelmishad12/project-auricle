@@ -15,11 +15,10 @@ Project Auricle serves as a comprehensive architectural blueprint and implementa
 │    │    ├── nodes.py   # LangGraph Node definitions
 │    │    └── tools.py   # Extracted tools for LLM use
 │    ├── /services   # Concrete Services and Google integrations
-│    │    ├── google.py      # Google Services provider protocols
+│    │    ├── google.py      # Google Services (OAuth, Gmail & Calendar SDKs)
 │    │    ├── gemini.py      # Gemini 1.5 Flash Integration
 │    │    └── elevenlabs.py  # ElevenLabs Text-to-Speech
-│    ├── /adapters   # Concrete Implementations & Config
-│    │    ├── google_workspace.py   # Unified Google Workspace API Adapter
+│    ├── /adapters   # Config & Mock Injection
 │    │    ├── localmock.py          # Uses mock (Private/GitIgnored)
 │    │    └── config.py             # Dependency Injection wiring
 │    ├── /db         # Database and ORM definitions (PostgreSQL)
