@@ -13,6 +13,7 @@ from src.core.graph import AuricleGraph
 
 load_dotenv()
 
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Lifecycle manager for the FastAPI app."""
@@ -26,10 +27,12 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+
 class BriefingRequest(BaseModel):
     """Request model for /api/v1/briefings/generate"""
     user_email: str
     env: str = "dev"
+
 
 @app.post("/api/v1/briefings/generate")
 async def generate_briefing(req: BriefingRequest):
@@ -58,6 +61,7 @@ async def generate_briefing(req: BriefingRequest):
         "briefing": final_state.get("briefing"),
         "safety_passed": final_state.get("safety_check_passed")
     }
+
 
 @app.get("/health")
 async def health_check():

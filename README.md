@@ -47,7 +47,13 @@ Project Auricle serves as a comprehensive architectural blueprint and implementa
 
 4. **Run the Server Locally**
    ```bash
-   uvicorn server:app --reload --port 8000
+   ./venv/bin/uvicorn server:app --reload --port 8000
+   ```
+
+5. **Run Live End-to-End Test**
+   Ensure your `.env` is populated with real credentials and the local server is running. In a separate terminal window, execute the live test script to trigger the LangGraph orchestration and OAuth flow:
+   ```bash
+   ./venv/bin/python test_live.py
    ```
 
 ## Setup & Authentication
@@ -66,7 +72,7 @@ The following keys must be provisioned in the execution environment locally and 
 ```bash
 GOOGLE_CLIENT_ID="<From GCP Console>"
 GOOGLE_CLIENT_SECRET="<From GCP Console>"
-GEMINI_API_KEY="<From Vertex AI or AI Studio>"
+GEMINI_VERTEX_AI_CREDENTIALS="/path/to/gemini-service-account-key.json"
 ELEVENLABS_API_KEY="<From ElevenLabs Dashboard>"
 DATABASE_URL="postgresql://user:password@localhost:5432/auricle"
 ```

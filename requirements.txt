@@ -9,7 +9,11 @@ pydantic
 google-api-python-client
 google-auth-oauthlib
 google-auth-httplib2
-google-generativeai
+google-cloud-aiplatform
 elevenlabs
 python-dotenv
 langgraph-checkpoint-postgres
+requests
+
+# Auto-Formatting
+autopep8

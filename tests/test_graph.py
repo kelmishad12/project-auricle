@@ -8,6 +8,7 @@ import pytest
 from src.adapters.localmock import MockCalendarAdapter, MockMailAdapter
 from src.core.graph import AuricleGraph
 
+
 @pytest.mark.asyncio
 async def test_graph_initializes():
     """Verify AuricleGraph initializes correctly."""
@@ -15,6 +16,7 @@ async def test_graph_initializes():
     cal = MockCalendarAdapter()
     graph = AuricleGraph(mail_provider=mail, cal_provider=cal)
     assert graph is not None
+
 
 @pytest.mark.asyncio
 async def test_graph_invoke_with_mocks():

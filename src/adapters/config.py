@@ -7,6 +7,7 @@ from src.services.google import GoogleWorkspaceService
 # pylint: disable=import-error,no-name-in-module
 from src.adapters.localmock import MockCalendarAdapter, MockMailAdapter
 
+
 def get_providers(env: str = "dev") -> Dict[str, Any]:
     """
     Dependency Injection wiring.

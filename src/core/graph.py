@@ -11,10 +11,14 @@ from src.core.nodes import fetch_calendar, fetch_emails, reflexion_loop, synthes
 from src.core.state import AgentState
 from src.services.google import CalendarProvider, MailProvider
 
+
 class AuricleGraph:
     """Supervisor and Node definitions. Pure LangGraph logic."""
-    def __init__(self, mail_provider: MailProvider, cal_provider: CalendarProvider):
-        # TODO: [Critique Issue] Add overarching ApplicationContext/Dependency Injector
+
+    def __init__(self, mail_provider: MailProvider,
+                 cal_provider: CalendarProvider):
+        # TODO: [Critique Issue] Add overarching ApplicationContext/Dependency
+        # Injector
         self.mail_provider = mail_provider
         self.cal_provider = cal_provider
 
@@ -43,13 +47,15 @@ class AuricleGraph:
                 # pylint: disable=import-outside-toplevel
                 from langgraph.checkpoint.postgres import PostgresSaver
                 from psycopg import Connection
-                # Note: For production, use pooling. Single connection here for simplicity
+                # Note: For production, use pooling. Single connection here for
+                # simplicity
                 self.conn = Connection.connect(db_url)
                 checkpointer = PostgresSaver(self.conn)
                 checkpointer.setup()
                 print("✅ PostgresSaver initialized successfully.")
-            except Exception as e: # pylint: disable=broad-exception-caught
-                print(f"⚠️ Failed to connect to Postgres ({e}). Falling back to MemorySaver.")
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                print(
+                    f"⚠️ Failed to connect to Postgres ({e}). Falling back to MemorySaver.")
                 checkpointer = MemorySaver()
         else:
             checkpointer = MemorySaver()
