@@ -2,7 +2,6 @@
 Unit tests for Project Auricle Services.
 """
 from unittest.mock import patch, MagicMock
-import pytest
 
 from src.services.gemini import GeminiService
 from src.services.elevenlabs import ElevenLabsService
@@ -12,7 +11,7 @@ def test_gemini_service_mocked():
     service = GeminiService(api_key=None)
     content = service.generate_content("Hello")
     assert "Mocked" in content
-    
+
     analysis = service.analyze_context({"briefing": "Test"})
     assert "Mock" in analysis["reasoning"]
     assert analysis["safety_passed"] is True
@@ -47,6 +46,6 @@ def test_elevenlabs_service_with_key(mock_client):
 
     service = ElevenLabsService(api_key="TEST_KEY")
     audio = service.generate_audio_stream("Hello")
-    
+
     assert audio == b"audio_chunk"
     mock_instance.text_to_speech.convert.assert_called_once()

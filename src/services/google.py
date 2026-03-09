@@ -75,12 +75,14 @@ class GoogleWorkspaceService(MailProvider, CalendarProvider):
 
     @property
     def gmail_service(self):
+        """Lazy-load and return the built Gmail service client."""
         if not self._gmail_service:
             self._gmail_service = get_gmail_service(self.credentials_path)
         return self._gmail_service
 
     @property
     def calendar_service(self):
+        """Lazy-load and return the built Calendar service client."""
         if not self._calendar_service:
             self._calendar_service = get_calendar_service(self.credentials_path)
         return self._calendar_service
