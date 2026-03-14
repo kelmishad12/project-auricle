@@ -40,12 +40,21 @@ async def synthesize_briefing(state: AgentState, config: RunnableConfig):
     """Synthesize the final briefing contextually."""
     gemini = GeminiService()
 
+    revision_count = state.get('revision_count', 0)
+    critic_feedback = state.get('critic_feedback', '')
+
     prompt = (
         "You are an AI Executive Assistant. Create a concise, professional daily briefing "
-        "using the following data. Keep it under 5 minutes when spoken.\\n\\n"
-        f"Emails:\\n{chr(10).join(state.get('email_summaries', []))}\\n\\n"
-        f"Calendar:\\n{chr(10).join(state.get('calendar_events', []))}\\n"
+        "using the following data. Keep it under 5 minutes when spoken.\n\n"
+        f"Emails:\n{chr(10).join(state.get('email_summaries', []))}\n\n"
+        f"Calendar:\n{chr(10).join(state.get('calendar_events', []))}\n"
     )
+
+    if revision_count > 0 and critic_feedback:
+        prompt += (
+            f"\n\nCRITIC FEEDBACK FROM PREVIOUS DRAFT:\n{critic_feedback}\n\n"
+            "Please revise your briefing to explicitly address and fix the issues mentioned above."
+        )
 
     briefing = gemini.generate_content(prompt)
     return {"briefing": briefing}
@@ -57,10 +66,33 @@ async def reflexion_loop(state: AgentState, config: RunnableConfig):
     """Enforce strict Safety/Privacy protocols via a Reflexion loop."""
     gemini = GeminiService()
 
+    revision_count = state.get('revision_count', 0)
     analysis = gemini.analyze_context(state.get('briefing', ''))
 
     safety_passed = analysis.get("safety_passed", False)
-    if not safety_passed:
-        print(f"[Reflexion] Safety Warning: {analysis.get('reasoning')}")
+    reasoning = analysis.get("reasoning", "")
 
-    return {"safety_check_passed": safety_passed}
+    if not safety_passed:
+        print(f"[Reflexion] Safety Warning [{revision_count + 1}/3]: {reasoning}")
+        return {
+            "safety_check_passed": False,
+            "revision_count": revision_count + 1,
+            "critic_feedback": reasoning
+        }
+
+    return {
+        "safety_check_passed": True,
+        "critic_feedback": ""
+    }
+
+# pylint: disable=unused-argument
+
+
+async def safe_mode_fallback(_state: AgentState, config: RunnableConfig):
+    """Fallback node if the reflexion loop fails 3 times."""
+    print("[Safe Mode] Agent failed safety checks too many times. Falling back to safe output.")
+    safe_briefing = (
+        "Good morning. I encountered multiple safety or formatting errors while generating "
+        "your briefing today. Please check your email and calendar manually for updates."
+    )
+    return {"briefing": safe_briefing, "safety_check_passed": False}

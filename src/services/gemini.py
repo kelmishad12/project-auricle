@@ -64,8 +64,26 @@ class GeminiService(LLMProvider):
             }
 
         prompt = (
-            "Analyze the following context state. Provide reasoning and determine "
-            f"if it passes safety checks. State: {state}"
+            "You are a Safety Critic evaluating a generated daily briefing draft. "
+            "Check for the following criteria:\n"
+            "1. PII/Safety: No highly sensitive personal data exposed unsafely.\n"
+            "2. Grounding: The draft must accurately reflect the provided source "
+            "context without hallucinations.\n"
+            "3. Tone: The tone must be strictly professional and concise.\n\n"
+            f"Draft Briefing: {state}\n\n"
+            "Respond ONLY with a valid JSON object in this format (no markdown tags): "
+            '{"safety_passed": true/false, '
+            '"feedback": "Detailed reasoning or instructions for rewrite"}'
         )
-        response = self.model.generate_content(prompt)
-        return {"reasoning": response.text, "safety_passed": True}
+        try:
+            response = self.model.generate_content(prompt)
+            # Remove any possible markdown block formatting from the response
+            cleaned_text = response.text.replace('```json', '').replace('```', '').strip()
+            result = json.loads(cleaned_text)
+            return {
+                "reasoning": result.get("feedback", "No feedback provided."),
+                "safety_passed": result.get("safety_passed", False)
+            }
+        except Exception as e:
+            print(f"⚠️ Critic parsing failed: {e}. Defaulting to fail.")
+            return {"reasoning": f"Parsing error: {e}", "safety_passed": False}

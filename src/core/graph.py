@@ -7,7 +7,13 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.checkpoint.memory import MemorySaver
 
-from src.core.nodes import fetch_calendar, fetch_emails, reflexion_loop, synthesize_briefing
+from src.core.nodes import (
+    fetch_calendar,
+    fetch_emails,
+    reflexion_loop,
+    synthesize_briefing,
+    safe_mode_fallback
+)
 from src.core.state import AgentState
 from src.services.google import CalendarProvider, MailProvider
 
@@ -30,13 +36,31 @@ class AuricleGraph:
         workflow.add_node("fetch_calendar", fetch_calendar)
         workflow.add_node("synthesize_briefing", synthesize_briefing)
         workflow.add_node("reflexion_loop", reflexion_loop)
+        workflow.add_node("safe_mode_fallback", safe_mode_fallback)
 
         # Add edges Flow
         workflow.set_entry_point("fetch_emails")
         workflow.add_edge("fetch_emails", "fetch_calendar")
         workflow.add_edge("fetch_calendar", "synthesize_briefing")
         workflow.add_edge("synthesize_briefing", "reflexion_loop")
-        workflow.add_edge("reflexion_loop", END)
+        # Self-correction loop conditional edge
+        def route_reflexion(state):
+            if state.get("safety_check_passed"):
+                return "END"
+            if state.get("revision_count", 0) < 3:
+                return "synthesize_briefing"
+            return "safe_mode_fallback"
+
+        workflow.add_conditional_edges(
+            "reflexion_loop",
+            route_reflexion,
+            {
+                "END": END,
+                "synthesize_briefing": "synthesize_briefing",
+                "safe_mode_fallback": "safe_mode_fallback"
+            }
+        )
+        workflow.add_edge("safe_mode_fallback", END)
 
         if checkpointer is None:
             checkpointer = MemorySaver()

@@ -47,7 +47,9 @@ async def generate_briefing(req: BriefingRequest):
         "email_summaries": [],
         "calendar_events": [],
         "briefing": "",
-        "safety_check_passed": False
+        "safety_check_passed": False,
+        "revision_count": 0,
+        "critic_feedback": ""
     }
 
     db_url = os.environ.get("DATABASE_URL")

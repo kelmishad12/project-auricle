@@ -13,3 +13,5 @@ class AgentState(TypedDict):
     calendar_events: list[str]
     briefing: str
     safety_check_passed: bool
+    revision_count: int
+    critic_feedback: str
