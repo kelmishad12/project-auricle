@@ -8,6 +8,7 @@ from langgraph.graph import END, StateGraph
 from langgraph.checkpoint.memory import MemorySaver
 
 from src.core.nodes import (
+    supervisor,
     fetch_calendar,
     fetch_emails,
     reflexion_loop,
@@ -32,6 +33,7 @@ class AuricleGraph:
         workflow = StateGraph(AgentState)
 
         # Add nodes
+        workflow.add_node("supervisor", supervisor)
         workflow.add_node("fetch_emails", fetch_emails)
         workflow.add_node("fetch_calendar", fetch_calendar)
         workflow.add_node("synthesize_briefing", synthesize_briefing)
@@ -39,8 +41,17 @@ class AuricleGraph:
         workflow.add_node("safe_mode_fallback", safe_mode_fallback)
 
         # Add edges Flow
-        workflow.set_entry_point("fetch_emails")
-        workflow.add_edge("fetch_emails", "fetch_calendar")
+        workflow.set_entry_point("supervisor")
+
+        # Fan-out: supervisor branches to both in parallel
+        workflow.add_conditional_edges(
+            "supervisor",
+            lambda state: ["fetch_emails", "fetch_calendar"],
+            ["fetch_emails", "fetch_calendar"]
+        )
+
+        # Fan-in: wait for both before synthesis
+        workflow.add_edge("fetch_emails", "synthesize_briefing")
         workflow.add_edge("fetch_calendar", "synthesize_briefing")
         workflow.add_edge("synthesize_briefing", "reflexion_loop")
         # Self-correction loop conditional edge

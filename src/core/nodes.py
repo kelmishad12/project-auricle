@@ -17,6 +17,13 @@ def get_cal_provider(config: RunnableConfig) -> CalendarProvider:
     """Extract CalendarProvider from config."""
     return config["configurable"].get("cal_provider")
 
+# pylint: disable=unused-argument
+
+
+async def supervisor(_state: AgentState, config: RunnableConfig):
+    """Supervisor node that routes to fetchers in parallel."""
+    return {}
+
 
 async def fetch_emails(_state: AgentState, config: RunnableConfig):
     """Fetch emails using the injected MailProvider port."""
