@@ -16,7 +16,7 @@ class AuricleGraph:
     """Supervisor and Node definitions. Pure LangGraph logic."""
 
     def __init__(self, mail_provider: MailProvider,
-                 cal_provider: CalendarProvider):
+                 cal_provider: CalendarProvider, checkpointer=None):
         # TODO: [Critique Issue] Add overarching ApplicationContext/Dependency
         # Injector
         self.mail_provider = mail_provider
@@ -38,26 +38,7 @@ class AuricleGraph:
         workflow.add_edge("synthesize_briefing", "reflexion_loop")
         workflow.add_edge("reflexion_loop", END)
 
-        # Setup state persistence
-        db_url = os.environ.get("DATABASE_URL")
-        checkpointer = None
-
-        if db_url:
-            try:
-                # pylint: disable=import-outside-toplevel
-                from langgraph.checkpoint.postgres import PostgresSaver
-                from psycopg import Connection
-                # Note: For production, use pooling. Single connection here for
-                # simplicity
-                self.conn = Connection.connect(db_url)
-                checkpointer = PostgresSaver(self.conn)
-                checkpointer.setup()
-                print("✅ PostgresSaver initialized successfully.")
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                print(
-                    f"⚠️ Failed to connect to Postgres ({e}). Falling back to MemorySaver.")
-                checkpointer = MemorySaver()
-        else:
+        if checkpointer is None:
             checkpointer = MemorySaver()
 
         self.app = workflow.compile(checkpointer=checkpointer)

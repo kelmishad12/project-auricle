@@ -13,6 +13,7 @@ google-cloud-aiplatform
 elevenlabs
 python-dotenv
 langgraph-checkpoint-postgres
+psycopg[binary]
 requests
 
 # Auto-Formatting
