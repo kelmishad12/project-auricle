@@ -1,6 +1,13 @@
 import requests
 import json
 import time
+import subprocess
+import os
+from dotenv import load_dotenv
+
+from src.services.elevenlabs import ElevenLabsService
+
+load_dotenv()
 
 print("====================================")
 print("Project Auricle - Live API Test")
@@ -30,7 +37,22 @@ try:
     print("--- RAW BRIEFING TEXT ---")
     print(data.get("briefing"))
     print("-------------------------\n")
-    print(f"Safety Passed: {data.get('safety_passed')}")
+    print(f"Safety Passed: {data.get('safety_passed')}\n")
+
+    print("🎙️ Synthesizing audio with ElevenLabs...")
+    try:
+        elevenlabs = ElevenLabsService()
+        audio_bytes = elevenlabs.generate_audio_stream(data.get("briefing"))
+        
+        audio_file = "briefing.mp3"
+        with open(audio_file, "wb") as f:
+            f.write(audio_bytes)
+        print(f"✅ Audio saved to {audio_file}. Playing now...")
+        
+        # macOS native audio player
+        subprocess.run(["afplay", audio_file])
+    except Exception as audio_e:
+        print(f"⚠️ Could not synthesize/play audio: {audio_e}")
 
 except requests.exceptions.ConnectionError:
     print("❌ Connection Error: Is the uvicorn server running?")

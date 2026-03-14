@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .env
 credentials.json
+briefing.mp3
 token.json
 venv/
 env/

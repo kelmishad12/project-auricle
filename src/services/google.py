@@ -1,11 +1,11 @@
 """
 Google Services provider protocols and factories.
 """
-# pylint:
-# disable=line-too-long,import-outside-toplevel,import-error,no-name-in-module,no-member
+# pylint: disable=import-error,no-name-in-module,no-member
 from typing import Protocol, List, Dict, Any
 import asyncio
 import os.path
+import datetime
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -29,7 +29,9 @@ def _get_credentials(client_secrets_file: str = 'credentials.json'):
             redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI")
             if not redirect_uri:
                 raise ValueError(
-                    "GOOGLE_REDIRECT_URI environment variable must be set (e.g., http://localhost:57785/)")
+                    "GOOGLE_REDIRECT_URI environment variable must be set "
+                    "(e.g., http://localhost:57785/)"
+                )
 
             if not os.path.exists(client_secrets_file):
                 client_id = os.environ.get("GOOGLE_CLIENT_ID")
@@ -159,7 +161,6 @@ class GoogleWorkspaceService(MailProvider, CalendarProvider):
         return True
 
     async def get_upcoming_events(self, days: int = 1) -> List[Dict[str, Any]]:
-        import datetime
         loop = asyncio.get_event_loop()
 
         def _fetch():
