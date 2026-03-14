@@ -54,6 +54,7 @@ async def generate_briefing(req: BriefingRequest):
 
     try:
         if db_url:
+            # pylint: disable=import-outside-toplevel
             from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
             async with AsyncPostgresSaver.from_conn_string(db_url) as checkpointer:
                 await checkpointer.asetup()
@@ -63,7 +64,7 @@ async def generate_briefing(req: BriefingRequest):
                     cal_provider=providers["cal_provider"],
                     checkpointer=checkpointer
                 )
-                
+
                 # ==============================================================================
                 # 🕰️ TIME TRAVEL DEBUGGING (State Persistence)
                 # To verify state persists to Postgres, check the `checkpoints` tables in your DB.
@@ -77,7 +78,7 @@ async def generate_briefing(req: BriefingRequest):
                 final_state = await graph.ainvoke(initial_state)
         else:
             raise ValueError("DATABASE_URL not set.")
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"⚠️ DB fallback triggered ({e}). Using MemorySaver.")
         graph = AuricleGraph(
             mail_provider=providers["mail_provider"],
