@@ -47,6 +47,7 @@ async def generate_briefing(req: BriefingRequest):
         "email_summaries": [],
         "calendar_events": [],
         "briefing": "",
+        "spoken_briefing": "",
         "safety_check_passed": False,
         "revision_count": 0,
         "critic_feedback": ""
@@ -92,6 +93,7 @@ async def generate_briefing(req: BriefingRequest):
     return {
         "status": "success",
         "briefing": final_state.get("briefing"),
+        "spoken_briefing": final_state.get("spoken_briefing"),
         "safety_passed": final_state.get("safety_check_passed")
     }
 

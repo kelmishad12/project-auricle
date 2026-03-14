@@ -13,7 +13,8 @@ from src.core.nodes import (
     fetch_emails,
     reflexion_loop,
     synthesize_briefing,
-    safe_mode_fallback
+    safe_mode_fallback,
+    generate_audio_script
 )
 from src.core.state import AgentState
 from src.services.google import CalendarProvider, MailProvider
@@ -39,6 +40,7 @@ class AuricleGraph:
         workflow.add_node("synthesize_briefing", synthesize_briefing)
         workflow.add_node("reflexion_loop", reflexion_loop)
         workflow.add_node("safe_mode_fallback", safe_mode_fallback)
+        workflow.add_node("generate_audio_script", generate_audio_script)
 
         # Add edges Flow
         workflow.set_entry_point("supervisor")
@@ -57,7 +59,7 @@ class AuricleGraph:
         # Self-correction loop conditional edge
         def route_reflexion(state):
             if state.get("safety_check_passed"):
-                return "END"
+                return "generate_audio_script"
             if state.get("revision_count", 0) < 3:
                 return "synthesize_briefing"
             return "safe_mode_fallback"
@@ -66,12 +68,13 @@ class AuricleGraph:
             "reflexion_loop",
             route_reflexion,
             {
-                "END": END,
+                "generate_audio_script": "generate_audio_script",
                 "synthesize_briefing": "synthesize_briefing",
                 "safe_mode_fallback": "safe_mode_fallback"
             }
         )
-        workflow.add_edge("safe_mode_fallback", END)
+        workflow.add_edge("safe_mode_fallback", "generate_audio_script")
+        workflow.add_edge("generate_audio_script", END)
 
         if checkpointer is None:
             checkpointer = MemorySaver()

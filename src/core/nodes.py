@@ -103,3 +103,23 @@ async def safe_mode_fallback(_state: AgentState, config: RunnableConfig):
         "your briefing today. Please check your email and calendar manually for updates."
     )
     return {"briefing": safe_briefing, "safety_check_passed": False}
+
+# pylint: disable=unused-argument
+
+
+async def generate_audio_script(state: AgentState, config: RunnableConfig):
+    """Rewrite the final briefing into a natural, spoken script for TTS."""
+    gemini = GeminiService()
+
+    prompt = (
+        "You are an expert voice scriptwriter. Take the following daily briefing "
+        "and rewrite it to be read out loud naturally by a text-to-speech engine. "
+        "Remove all markdown formatting, bullet points, asterisks, and special characters.\n"
+        "Ensure the flow is conversational, warm, and professional, "
+        "as if spoken by a human assistant.\n"
+        "Write out numbers or times plainly (e.g., 'three thirty PM' instead of '3:30').\n\n"
+        f"Original Briefing:\n{state.get('briefing', '')}"
+    )
+
+    spoken = gemini.generate_content(prompt)
+    return {"spoken_briefing": spoken}

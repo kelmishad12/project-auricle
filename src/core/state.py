@@ -12,6 +12,7 @@ class AgentState(TypedDict):
     email_summaries: list[str]
     calendar_events: list[str]
     briefing: str
+    spoken_briefing: str
     safety_check_passed: bool
     revision_count: int
     critic_feedback: str

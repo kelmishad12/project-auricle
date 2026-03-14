@@ -32,6 +32,7 @@ async def test_graph_invoke_with_mocks():
         "email_summaries": [],
         "calendar_events": [],
         "briefing": "",
+        "spoken_briefing": "",
         "safety_check_passed": False
     }
 
@@ -63,6 +64,7 @@ async def test_reflexion_loop_safe_mode_fallback(mock_gemini_class):
         "email_summaries": [],
         "calendar_events": [],
         "briefing": "",
+        "spoken_briefing": "",
         "safety_check_passed": False,
         "revision_count": 0,
         "critic_feedback": ""
@@ -96,6 +98,7 @@ async def test_reflexion_loop_recovers(mock_gemini_class):
         "email_summaries": [],
         "calendar_events": [],
         "briefing": "",
+        "spoken_briefing": "",
         "safety_check_passed": False,
         "revision_count": 0,
         "critic_feedback": ""
@@ -105,4 +108,5 @@ async def test_reflexion_loop_recovers(mock_gemini_class):
 
     assert result["safety_check_passed"] is True
     assert result["revision_count"] == 1
-    assert mock_gemini.generate_content.call_count == 2
+    assert mock_gemini.generate_content.call_count == 3
+    assert "spoken_briefing" in result
