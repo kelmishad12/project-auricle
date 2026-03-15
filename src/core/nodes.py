@@ -74,7 +74,7 @@ async def reflexion_loop(state: AgentState, config: RunnableConfig):
     gemini = GeminiService()
 
     revision_count = state.get('revision_count', 0)
-    analysis = gemini.analyze_context(state.get('briefing', ''))
+    analysis = gemini.analyze_context(state)
 
     safety_passed = analysis.get("safety_passed", False)
     reasoning = analysis.get("reasoning", "")

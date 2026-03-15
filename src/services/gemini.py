@@ -8,8 +8,7 @@ import json
 import datetime
 import google.generativeai as genai
 from google.generativeai import caching
-
-MODEL_NAME = "gemini-2.0-flash-001"
+MODEL_NAME = "gemini-2.5-flash"
 
 
 class LLMProvider(Protocol):
@@ -44,6 +43,9 @@ class GeminiService(LLMProvider):
 
         if self.api_key:
             try:
+                # The caching API statically requires GOOGLE_API_KEY globally
+                # for stateless API requests like the follow-up chat
+                os.environ["GOOGLE_API_KEY"] = self.api_key
                 genai.configure(api_key=self.api_key)
                 self.model = genai.GenerativeModel(MODEL_NAME)
             except Exception as e:
@@ -72,17 +74,25 @@ class GeminiService(LLMProvider):
                 "safety_passed": True
             }
 
+        emails = chr(10).join(state.get('email_summaries', [])) if isinstance(state, dict) else ""
+        calendar = chr(10).join(state.get('calendar_events', [])) if isinstance(state, dict) else ""
+        briefing = state.get('briefing', '') if isinstance(state, dict) else state
+
         prompt = (
             "You are a Safety Critic evaluating a generated daily briefing draft. "
             "Check for the following criteria:\n"
-            "1. PII/Safety: No highly sensitive personal data exposed unsafely.\n"
+            "1. PII/Safety: It is explicitly ALLOWED to summarize confidential, internal, "
+            "or sensitive emails (like offer letters) in this private executive dashboard context. "
+            "Do not penalize for addressing sensitive professional topics.\n"
             "2. Grounding: The draft must accurately reflect the provided source "
             "context without hallucinations.\n"
             "3. Tone: The tone must be strictly professional and concise.\n\n"
-            f"Draft Briefing: {state}\n\n"
+            f"Source Context:\nEmails:\n{emails}\nCalendar:\n{calendar}\n\n"
+            f"Draft Briefing: {briefing}\n\n"
             "Respond ONLY with a valid JSON object in this format (no markdown tags): "
             '{"safety_passed": true/false, '
-            '"feedback": "Detailed reasoning or instructions for rewrite"}')
+            '"feedback": "Detailed reasoning or instructions for rewrite"}'
+        )
         try:
             response = self.model.generate_content(prompt)
             # Remove any possible markdown block formatting from the response

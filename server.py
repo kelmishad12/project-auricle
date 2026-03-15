@@ -8,11 +8,13 @@ from contextlib import asynccontextmanager
 from langgraph.checkpoint.memory import MemorySaver
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from src.adapters.config import get_providers
 from src.core.graph import AuricleGraph
 from src.services.gemini import GeminiService
+from src.services.elevenlabs import ElevenLabsService
 
 load_dotenv()
 
@@ -35,12 +37,19 @@ class BriefingRequest(BaseModel):
     """Request model for /api/v1/briefings/generate"""
     user_email: str
     env: str = "dev"
+    profile_path: str = "scripts/user_profile_sample.txt"
 
 
 @app.post("/api/v1/briefings/generate")
 async def generate_briefing(req: BriefingRequest):
     """Generate a contextual briefing for a user."""
+    # pylint: disable=too-many-locals
     print("Generating briefing for user: ", req.user_email)
+
+    # Inject dynamic persona from UI
+    if req.profile_path:
+        os.environ["USER_PROFILE_PATH"] = req.profile_path
+
     providers = get_providers(env=req.env)
 
     initial_state = {
@@ -61,7 +70,7 @@ async def generate_briefing(req: BriefingRequest):
             # pylint: disable=import-outside-toplevel
             from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
             async with AsyncPostgresSaver.from_conn_string(db_url) as checkpointer:
-                await checkpointer.asetup()
+                await checkpointer.setup()
                 print("✅ AsyncPostgresSaver initialized successfully.")
                 graph = AuricleGraph(
                     mail_provider=providers["mail_provider"],
@@ -114,12 +123,25 @@ async def generate_briefing(req: BriefingRequest):
         user_profile_text=user_profile,
         dynamic_data=dynamic_content)
 
+    audio_path = None
+    spoken_text = final_state.get("spoken_briefing", "")
+    if spoken_text:
+        try:
+            eleven = ElevenLabsService()
+            audio_bytes = eleven.generate_audio_stream(spoken_text)
+            with open("frontend/audio.mp3", "wb") as f:
+                f.write(audio_bytes)
+            audio_path = "audio.mp3"
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            print(f"⚠️ Audio synthesis failed: {e}")
+
     return {
         "status": "success",
         "briefing": final_state.get("briefing"),
-        "spoken_briefing": final_state.get("spoken_briefing"),
+        "spoken_briefing": spoken_text,
         "safety_passed": final_state.get("safety_check_passed"),
-        "cache_id": cache_id
+        "cache_id": cache_id,
+        "audio_path": audio_path
     }
 
 
@@ -142,9 +164,12 @@ async def chat_briefing(req: ChatRequest):
 
     return {
         "status": "success",
-        "response": response
+        "answer": response
     }
 
+
+# Mount React Frontend to Root
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
 @app.get("/health")
 async def health_check():

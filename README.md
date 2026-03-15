@@ -78,8 +78,7 @@ DATABASE_URL="postgresql://user:password@localhost:5432/auricle"
 ```
 
 ## Context Caching for Deep Dive Q&A
-
-To enable low-latency, low-cost multi-turn Q&A, Project Auricle implements **Context Caching** using Gemini 2.0 Flash (`models/gemini-2.0-flash-001`).
+To enable low-latency, low-cost multi-turn Q&A, Project Auricle implements **Context Caching** using Gemini 2.5 Flash (`models/gemini-2.5-flash`).
 
 By establishing a 60-minute TTL Context Cache, the `GenerativeModel.from_cached_content()` method bypasses the need to process the entire massive token prompt on every single turn.
 

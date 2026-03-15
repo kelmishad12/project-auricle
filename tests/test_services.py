@@ -39,9 +39,10 @@ def test_gemini_service_with_key(mock_model_class, _mock_configure):
 
 def test_elevenlabs_service_mocked():
     """Test ElevenLabsService returns mocked response without API key."""
-    service = ElevenLabsService(api_key=None)
-    audio = service.generate_audio_stream("Hello")
-    assert b"Mocked" in audio
+    with patch.dict('os.environ', clear=True):
+        service = ElevenLabsService(api_key=None)
+        audio = service.generate_audio_stream("Hello")
+        assert b"Mocked" in audio
 
 
 @patch("src.services.elevenlabs.ElevenLabs")

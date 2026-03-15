@@ -10,3 +10,4 @@ env/
 
 # Private implementations
 src/adapters/localmock.py
+frontend/audio.mp3

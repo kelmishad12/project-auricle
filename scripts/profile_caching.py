@@ -11,8 +11,7 @@ from dotenv import load_dotenv
 # pylint: disable=import-error,no-name-in-module
 import google.generativeai as genai
 from google.generativeai import caching
-
-MODEL_NAME = "gemini-2.0-flash-001"
+MODEL_NAME = "gemini-2.5-flash"
 
 
 def generate_heavy_context(num_tokens: int = 100000) -> str:
