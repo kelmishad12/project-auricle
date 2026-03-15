@@ -7,11 +7,12 @@ from contextlib import asynccontextmanager
 
 from langgraph.checkpoint.memory import MemorySaver
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from src.adapters.config import get_providers
 from src.core.graph import AuricleGraph
+from src.services.gemini import GeminiService
 
 load_dotenv()
 
@@ -90,11 +91,58 @@ async def generate_briefing(req: BriefingRequest):
         )
         final_state = await graph.ainvoke(initial_state)
 
+    # Create Context Cache for Deep Dive Follow-ups
+    gemini = GeminiService()
+
+    # In a scalable production system, this would query a dedicated Users Database via user_id.
+    # For now, it dynamically fetches from an environment path, decoupling state
+    # from code directories.
+    profile_path = os.environ.get("USER_PROFILE_PATH")
+    if profile_path and os.path.exists(profile_path):
+        with open(profile_path, "r", encoding="utf-8") as f:
+            user_profile = f.read()
+    else:
+        user_profile = "User Profile: Executive leadership. Tone: Professional and concise."
+
+    dynamic_content = (
+        f"EMAILS:\n{chr(10).join(final_state.get('email_summaries', []))}\n\n"
+        f"CALENDAR:\n{chr(10).join(final_state.get('calendar_events', []))}"
+    )
+
+    cache_id = gemini.create_cached_context(
+        system_instruction="You are an AI Executive Assistant helping summarize daily context.",
+        user_profile_text=user_profile,
+        dynamic_data=dynamic_content)
+
     return {
         "status": "success",
         "briefing": final_state.get("briefing"),
         "spoken_briefing": final_state.get("spoken_briefing"),
-        "safety_passed": final_state.get("safety_check_passed")
+        "safety_passed": final_state.get("safety_check_passed"),
+        "cache_id": cache_id
+    }
+
+
+class ChatRequest(BaseModel):
+    """Request model for /api/v1/briefings/chat"""
+    cache_id: str
+    message: str
+
+
+@app.post("/api/v1/briefings/chat")
+async def chat_briefing(req: ChatRequest):
+    """Deep Dive Query against a cached context."""
+    if not req.cache_id:
+        raise HTTPException(
+            status_code=400,
+            detail="cache_id is required for deep-dive chat.")
+
+    gemini = GeminiService()
+    response = gemini.chat_with_context(req.cache_id, req.message)
+
+    return {
+        "status": "success",
+        "response": response
     }
 
 

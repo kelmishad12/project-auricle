@@ -2,11 +2,14 @@
 Gemini integration for textual generation and reasoning.
 """
 # pylint: disable=import-error,no-name-in-module,broad-exception-caught
-from typing import Protocol, Any
+from typing import Protocol, Any, Optional
 import os
 import json
-import vertexai
-from vertexai.generative_models import GenerativeModel
+import datetime
+import google.generativeai as genai
+from google.generativeai import caching
+
+MODEL_NAME = "gemini-2.0-flash-001"
 
 
 class LLMProvider(Protocol):
@@ -18,6 +21,16 @@ class LLMProvider(Protocol):
     def analyze_context(self, state: Any) -> dict:
         """Analyze context state and return insights."""
 
+    def create_cached_context(
+            self,
+            system_instruction: str,
+            user_profile_text: str,
+            dynamic_data: str) -> Optional[str]:
+        """Cache static data plus dynamic data to optimize multi-turn QA."""
+
+    def chat_with_context(self, cache_name: str, prompt: str) -> str:
+        """Query the cached context via the LLM to get an answer."""
+
 
 class GeminiService(LLMProvider):
     """
@@ -25,27 +38,23 @@ class GeminiService(LLMProvider):
     Leverages LangGraph orchestration for structural reasoning.
     """
 
-    def __init__(self, credentials_path: str = None):
-        self.credentials_path = credentials_path or os.environ.get(
-            "GEMINI_VERTEX_AI_CREDENTIALS")
+    def __init__(self):
+        self.api_key = os.environ.get("GEMINI_API_KEY")
         self.is_mocked = False
 
-        if self.credentials_path:
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.credentials_path
+        if self.api_key:
             try:
-                with open(self.credentials_path, 'r', encoding='utf-8') as f:
-                    creds_data = json.load(f)
-                    project_id = creds_data.get('project_id')
-                vertexai.init(project=project_id, location="us-central1")
-                self.model = GenerativeModel("gemini-2.0-flash-001")
+                genai.configure(api_key=self.api_key)
+                self.model = genai.GenerativeModel(MODEL_NAME)
             except Exception as e:
-                print(f"WARNING: Failed to initialize Vertex AI: {e}")
+                print(f"WARNING: Failed to initialize Gemini API: {e}")
                 self.model = None
                 self.is_mocked = True
         else:
-            print("WARNING: GEMINI_VERTEX_AI_CREDENTIALS not found. "
+            print("WARNING: GEMINI_API_KEY not found. "
                   "GeminiService API calls will fail.")
             self.model = None
+            self.is_mocked = True
             self.is_mocked = True
 
     def generate_content(self, prompt: str) -> str:
@@ -73,12 +82,13 @@ class GeminiService(LLMProvider):
             f"Draft Briefing: {state}\n\n"
             "Respond ONLY with a valid JSON object in this format (no markdown tags): "
             '{"safety_passed": true/false, '
-            '"feedback": "Detailed reasoning or instructions for rewrite"}'
-        )
+            '"feedback": "Detailed reasoning or instructions for rewrite"}')
         try:
             response = self.model.generate_content(prompt)
             # Remove any possible markdown block formatting from the response
-            cleaned_text = response.text.replace('```json', '').replace('```', '').strip()
+            cleaned_text = response.text.replace(
+                '```json', '').replace(
+                '```', '').strip()
             result = json.loads(cleaned_text)
             return {
                 "reasoning": result.get("feedback", "No feedback provided."),
@@ -87,3 +97,55 @@ class GeminiService(LLMProvider):
         except Exception as e:
             print(f"⚠️ Critic parsing failed: {e}. Defaulting to fail.")
             return {"reasoning": f"Parsing error: {e}", "safety_passed": False}
+
+    def create_cached_context(
+            self,
+            system_instruction: str,
+            user_profile_text: str,
+            dynamic_data: str) -> Optional[str]:
+        """Creates a cached content object in Vertex AI to save >90% 
+        on token cost for subsequent inferences."""
+        if self.is_mocked:
+            return "mock-cache-12345"
+
+        try:
+            # Combine user profile (static) + emails/calendar (dynamic) into one large Part blob
+            # Normally this would be many files or a DB RAG lookup.
+            full_context = f"{user_profile_text}\n\n=== RECENT ACTIVITY ===\n{dynamic_data}"
+
+            # The TTL manages when Google automatically purges the cache from VRAM.
+            # E.g., The context is refreshed daily, so a 60 min TTL covers a
+            # standard chat session.
+            cached_content = caching.CachedContent.create(
+                model=f"models/{MODEL_NAME}",
+                system_instruction=system_instruction,
+                contents=[full_context],
+                ttl=datetime.timedelta(minutes=60),
+            )
+            print(
+                f"✅ Context Cache created successfully: {cached_content.name}")
+            return cached_content.name
+        except Exception as e:
+            print(f"⚠️ Cache creation failed: {e}")
+            return None
+
+    def chat_with_context(self, cache_name: str, prompt: str) -> str:
+        """Generate response against a pre-warmed context cache.
+        Reduces TTFT and token cost."""
+        if self.is_mocked:
+            return f"Mocked cached response for: {prompt}"
+
+        try:
+            # Retrieve the cached reference
+            cached_content = caching.CachedContent.get(cache_name)
+
+            # Initialize a model specific to this cached context
+            model = genai.GenerativeModel.from_cached_content(
+                cached_content=cached_content)
+
+            # Generate the fast response
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            print(f"⚠️ Cached chat failed: {e}")
+            return f"Error querying context cache: {e}"

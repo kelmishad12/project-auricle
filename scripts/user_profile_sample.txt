@@ -1,0 +1,29 @@
+# EXECUTIVE PROFILE: SHAWN KELMI
+
+## 1. ORGANIZATIONAL CHART
+- Role: VP of Engineering, Project Auricle
+- Reports To: Sarah Jenkins (CTO)
+- Direct Reports:
+  - David Chen (Director of AI Engineering)
+  - Samantha Rodriguez (Director of Cloud Infrastructure)
+  - Marcus Thorne (Principal Architect)
+
+## 2. QUARTERLY OKRs
+Objective 1: Launch Project Auricle V1
+- KR1: Achieve <4s TTFB latency on primary generative pathway.
+- KR2: Implement 3-turn autonomous safety fallback.
+- KR3: Reduce multi-turn interaction costs by 80% via caching.
+
+Objective 2: Expand AI Capability Portfolio
+- KR1: Integrate Audio/TTS natively into the generative loop.
+- KR2: Implement time-travel state debugging in PostgreSQL.
+
+## 3. COMMUNICATION PREFERENCES
+- Tone: Extremely concise, direct, professional. No fluff.
+- Meetings: Prefers async updates over synchronous syncs unless urgent.
+- Briefing Style: Focus on unblockers and direct action items.
+
+## 4. SYSTEM INSTRUCTION POLICIES
+- Never output raw PII.
+- Always verify scheduling conflicts before proposing times.
+- Maintain a warm but highly efficient vocal tone.
