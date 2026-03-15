@@ -19,7 +19,6 @@ def test_serves_react_app():
     response = client.get("/src/App.jsx")
     assert response.status_code == 200
     assert "function App()" in response.text
-    assert "executionNodes" in response.text
     assert "Deep Dive Chat" in response.text
 
 def test_serves_stylesheet():

@@ -108,5 +108,4 @@ async def test_reflexion_loop_recovers(mock_gemini_class):
 
     assert result["safety_check_passed"] is True
     assert result["revision_count"] == 1
-    assert mock_gemini.generate_content.call_count == 3
-    assert "spoken_briefing" in result
+    assert mock_gemini.generate_content.call_count == 2

@@ -16,3 +16,4 @@ class AgentState(TypedDict):
     safety_check_passed: bool
     revision_count: int
     critic_feedback: str
+    timing_metrics: dict[str, float]

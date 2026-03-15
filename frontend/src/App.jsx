@@ -8,28 +8,8 @@ function App() {
   const [error, setError] = useState(null);
   const [audioUrl, setAudioUrl] = useState(null);
   
-  // Pipeline nodes
-  const executionNodes = [
-    { id: "routing", label: "Supervisor Routing", duration: 500 },
-    { id: "fetch_emails", label: "Fetching Latest Emails", duration: 1500 },
-    { id: "fetch_calendar", label: "Fetching Calendar Events", duration: 1500 },
-    { id: "synthesizing", label: "Gemini Synthesis", duration: 3000 },
-    { id: "critique", label: "Reflexion Safety Diagnostics", duration: 2500 }
-  ];
-  
+  const [timingMetrics, setTimingMetrics] = useState({});
   const [activeNodeIndex, setActiveNodeIndex] = useState(-1);
-
-  // Simulated Progress Pipeline for UX (since SSE isn't implemented on backend yet)
-  useEffect(() => {
-    let timeoutId;
-    if (isGenerating && activeNodeIndex < executionNodes.length) {
-      const currentDuration = activeNodeIndex === -1 ? 500 : executionNodes[activeNodeIndex].duration;
-      timeoutId = setTimeout(() => {
-        setActiveNodeIndex(prev => prev + 1);
-      }, currentDuration);
-    }
-    return () => clearTimeout(timeoutId);
-  }, [isGenerating, activeNodeIndex]);
 
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -65,11 +45,41 @@ function App() {
     }
   };
 
+  const executionNodes = [
+    "Supervisor Routing",
+    "Fetching Latest Emails",
+    "Fetching Calendar Events",
+    "Gemini Synthesis",
+    "Reflexion Safety Diagnostics"
+  ];
+
+  useEffect(() => {
+    if (isGenerating) {
+      setActiveNodeIndex(0);
+      let currentIndex = 0;
+      let timer;
+      
+      const simulateProgress = () => {
+        currentIndex++;
+        if (currentIndex < executionNodes.length) {
+          setActiveNodeIndex(currentIndex);
+          const nextDelay = Math.floor(Math.random() * 2000) + 1000;
+          timer = setTimeout(simulateProgress, nextDelay);
+        }
+      };
+      
+      timer = setTimeout(simulateProgress, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setActiveNodeIndex(-1);
+    }
+  }, [isGenerating]);
+
   const handleGenerate = async () => {
     setIsGenerating(true);
     setError(null);
     setResult(null);
-    setActiveNodeIndex(-1);
+    setTimingMetrics({});
     setCacheId(null);
     setAudioUrl(null);
 
@@ -90,10 +100,8 @@ function App() {
 
       const data = await response.json();
       
-      // Force pipeline to completion
-      setActiveNodeIndex(executionNodes.length);
-      
       setResult(data.briefing);
+      setTimingMetrics(data.timing_metrics || {});
       setCacheId(data.cache_id || "mock-cache-id");
       
       if (data.audio_path) {
@@ -102,7 +110,6 @@ function App() {
 
     } catch (err) {
       setError(err.message);
-      setActiveNodeIndex(-1);
     } finally {
       setIsGenerating(false);
     }
@@ -110,25 +117,49 @@ function App() {
 
   const PipelineProgress = () => {
     if (!isGenerating && !result) return null;
+    
+    // Extract total if present, don't render it as a 'node'
+    const { Total, ...individualNodes } = timingMetrics;
+    const totalSec = Total ? (Total / 1000).toFixed(2) : "0.00";
+    
     return (
       <div className="pipeline-container">
-        <h3>Execution Pipeline</h3>
-        <div className="nodes">
-          {executionNodes.map((node, i) => {
-            let status = "pending";
-            if (activeNodeIndex > i || result) status = "complete";
-            else if (activeNodeIndex === i) status = "active";
-            
-            return (
-              <div key={node.id} className={`node-item ${status}`}>
+        <h3>Server TTFT Latency Metrics {result && `(Total: ${totalSec}s)`}</h3>
+        {isGenerating ? (
+          <div className="nodes">
+            {executionNodes.map((node, idx) => (
+              <div 
+                key={idx} 
+                className={`node-item ${
+                  idx < activeNodeIndex ? 'complete' : 
+                  idx === activeNodeIndex ? 'active' : 'pending'
+                }`}
+              >
                 <div className="node-icon">
-                  {status === "complete" ? "✓" : status === "active" ? "↻" : "⚬"}
+                  {idx < activeNodeIndex ? '✓' : idx === activeNodeIndex ? '↻' : '○'}
                 </div>
-                <div>{node.label}</div>
+                <div className="node-details">
+                  <span className="node-label">{node}</span>
+                  {idx === activeNodeIndex && <span className="node-status" style={{float: "right", color: "#666", marginLeft: "10px"}}>Processing...</span>}
+                </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="nodes">
+            {Object.entries(individualNodes).map(([nodeName, timeMs]) => (
+              <div key={nodeName} className="node-item complete">
+                <div className="node-icon">✓</div>
+                <div className="node-details">
+                  <span className="node-label">[{nodeName}]</span>
+                  <span className="node-time" style={{float: "right", color: "#666", marginLeft: "10px"}}>
+                     TTFT: {(timeMs / 1000).toFixed(2)}s
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };

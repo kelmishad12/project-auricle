@@ -42,6 +42,12 @@ def main():
         print("-------------------------\n")
         print(f"Safety Passed: {data.get('safety_passed')}\n")
 
+        print("--- LATENCY METRICS (TTFT) ---")
+        metrics = data.get("timing_metrics", {})
+        for node, ms in metrics.items():
+            print(f"  [{node}]: {ms}ms")
+        print("------------------------------\n")
+
         print("🎙️ Synthesizing audio with ElevenLabs...")
         try:
             elevenlabs = ElevenLabsService()
