@@ -74,9 +74,23 @@ class GeminiService(LLMProvider):
                 "safety_passed": True
             }
 
-        emails = chr(10).join(state.get('email_summaries', [])) if isinstance(state, dict) else ""
-        calendar = chr(10).join(state.get('calendar_events', [])) if isinstance(state, dict) else ""
-        briefing = state.get('briefing', '') if isinstance(state, dict) else state
+        emails = chr(10).join(
+            state.get(
+                'email_summaries',
+                [])) if isinstance(
+            state,
+            dict) else ""
+        calendar = chr(10).join(
+            state.get(
+                'calendar_events',
+                [])) if isinstance(
+            state,
+            dict) else ""
+        briefing = state.get(
+            'briefing',
+            '') if isinstance(
+            state,
+            dict) else state
 
         prompt = (
             "You are a Safety Critic evaluating a generated daily briefing draft. "
@@ -113,7 +127,7 @@ class GeminiService(LLMProvider):
             system_instruction: str,
             user_profile_text: str,
             dynamic_data: str) -> Optional[str]:
-        """Creates a cached content object in Vertex AI to save >90% 
+        """Creates a cached content object in Vertex AI to save >90%
         on token cost for subsequent inferences."""
         if self.is_mocked:
             return "mock-cache-12345"

@@ -35,7 +35,8 @@ class ElevenLabsService(AudioSynthesisProvider):
         if not self.client:
             return b"Audio binary payload here... (Mocked - No API Key)"
 
-        # Using a standard free-tier voice ID to prevent 402 API Payment Required errors
+        # Using a standard free-tier voice ID to prevent 402 API Payment
+        # Required errors
         generator = self.client.text_to_speech.convert(
             text=text,
             voice_id="hpp4J3VqNfWAUOO0d1Us",  # Default free tier voice

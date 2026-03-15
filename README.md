@@ -8,6 +8,10 @@ Project Auricle serves as a comprehensive architectural blueprint and implementa
 /
 ├── server.py        # FastAPI Entrypoint for Cloud Run
 ├── /docs            # Markdown contribution docs
+├── /scripts
+│    └── system_profile_sample.txt # The static System Profile giving Persona instructions
+├── /frontend
+│    ├── src/App.jsx # React UI
 ├── /src
 │    ├── /core       # Pure LangGraph logic (No API calls here)
 │    │    ├── state.py   # AgentState definition

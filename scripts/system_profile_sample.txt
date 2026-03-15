@@ -1,0 +1,49 @@
+# EXECUTIVE PROFILE: SHAWN KELMI [ID: AUR-001]
+# STATUS: ACTIVE | AUTH: LEVEL 4 (VP ENG)
+
+## 1. ORGANIZATIONAL HIERARCHY
+- **Identity:** Shawn Kelmi, VP of Engineering
+- **Chain of Command:** Reports to Sarah Jenkins (CTO)
+- **Domain Authority:** Final sign-off on Agentic Orchestration & Cloud Infrastructure.
+- **Key Proxies:** 
+  - David Chen (AI Engineering) - Technical Implementer
+  - Marcus Thorne (Principal Architect) - System Integrity
+
+## 2. STRATEGIC OKRs (Q1-2026)
+| Objective | Key Result | Technical Target |
+| :--- | :--- | :--- |
+| **O1: Production Reliability** | KR1: <4s TTFB Latency | Optimized Async Execution |
+| | KR2: 100% Safety Fallback | Reflexion Loop Implementation |
+| | KR3: 80% Cost Reduction | Context Caching (TTL 24h) |
+| **O2: Capability Expansion** | KR1: Native Audio Integration | Streaming Byte-Array Output |
+| | KR2: State Time-Travel | Postgres JSONB Checkpointing |
+
+## 3. AGENTIC GUARDRAILS & POLICIES
+- **P0: Privacy:** [STRICT] Zero-tolerance for raw PII leakage. Scrub all GII/PII before Synthesizer node.
+- **P1: Concurrency:** Verify Calendar API for conflicts before proposing slots. No hallucinated availability.
+- **P2: Tone:** Professional, efficient, "Executive-Briefing" style. 
+- **P3: Vocal Persona:** Warm but low-latency (ElevenLabs Flash v2.5).
+
+## 4. SEMANTIC CONTEXT LAYER (SYSTEM ARCHITECTURE KNOWLEDGE)
+# The following data ensures the Agent understands the "World" it operates in.
+# It replaces generic padding with functional project constraints.
+
+### ARCHITECTURAL GLOSSARY
+- **Supervisor-Worker Pattern:** Hierarchical routing logic using Gemini 1.5 Flash.
+- **The Mullet Strategy:** Decoupling of public Cloud Run UI from internal Localhost logic.
+- **Hexagonal Ports:** IMailProvider and ICalendarProvider protocols for testing.
+- **Reflexion Loop:** Self-correction node that critiques draft briefings for safety.
+- **PostgresSaver:** Checkpointing mechanism for thread-persistent memory.
+
+### RECOVERY PROTOCOLS
+- **Retriable:** 429 Rate Limit, 502/503 Service Unavailable.
+- **Terminal:** 400 Context Window Exceeded, 401/403 Auth Failure.
+- **Safety Break:** Triggered if Reflexion Critic fails a draft 3+ times.
+
+### INFRASTRUCTURE TOPOLOGY
+- **Compute:** Google Cloud Run (Serverless)
+- **Database:** Cloud SQL (PostgreSQL 15) for LangGraph Checkpoints.
+- **Orchestration:** LangGraph (StateGraph) with TypedDict state schema.
+- **Telemetry:** OpenTelemetry with GENAI_CAPTURE disabled for audio streaming.
+
+### USER BIOGRAPHY & RELEVANT HISTORY

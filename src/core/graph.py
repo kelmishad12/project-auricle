@@ -55,6 +55,7 @@ class AuricleGraph:
         workflow.add_edge("fetch_calendar", "synthesize_briefing")
         workflow.add_edge("synthesize_briefing", "reflexion_loop")
         # Self-correction loop conditional edge
+
         def route_reflexion(state):
             if state.get("safety_check_passed"):
                 return END

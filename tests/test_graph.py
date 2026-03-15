@@ -21,8 +21,19 @@ async def test_graph_initializes():
 
 
 @pytest.mark.asyncio
-async def test_graph_invoke_with_mocks():
+@patch("src.core.nodes.GeminiService")
+async def test_graph_invoke_with_mocks(mock_gemini_class):
     """Verify AuricleGraph execution with mock providers."""
+    mock_gemini = MagicMock()
+    mock_gemini.generate_content.return_value = "Safe mocked briefing"
+    mock_gemini.chat_with_context.return_value = "Safe mocked briefing"
+    mock_gemini.create_cached_context.return_value = "mock-cache-id"
+    mock_gemini.analyze_context.return_value = {
+        "safety_passed": True,
+        "reasoning": "Looks good"
+    }
+    mock_gemini_class.return_value = mock_gemini
+
     mail = MockMailAdapter()
     cal = MockCalendarAdapter()
     graph = AuricleGraph(mail_provider=mail, cal_provider=cal)
@@ -33,7 +44,9 @@ async def test_graph_invoke_with_mocks():
         "calendar_events": [],
         "briefing": "",
         "spoken_briefing": "",
-        "safety_check_passed": False
+        "safety_check_passed": False,
+        "revision_count": 0,
+        "critic_feedback": ""
     }
 
     result = await graph.ainvoke(initial_state)
@@ -49,6 +62,8 @@ async def test_reflexion_loop_safe_mode_fallback(mock_gemini_class):
     """Verify that failing safety checks 3 times triggers Safe Mode fallback."""
     mock_gemini = MagicMock()
     mock_gemini.generate_content.return_value = "Unsafe briefing"
+    mock_gemini.chat_with_context.return_value = "Unsafe briefing"
+    mock_gemini.create_cached_context.return_value = "mock-cache-id"
     mock_gemini.analyze_context.return_value = {
         "safety_passed": False,
         "reasoning": "Contains PII"
@@ -83,6 +98,8 @@ async def test_reflexion_loop_recovers(mock_gemini_class):
     """Verify that failing safety checks once and then passing works."""
     mock_gemini = MagicMock()
     mock_gemini.generate_content.return_value = "Mocked briefing"
+    mock_gemini.chat_with_context.return_value = "Mocked briefing"
+    mock_gemini.create_cached_context.return_value = "mock-cache-id"
     mock_gemini.analyze_context.side_effect = [
         {"safety_passed": False, "reasoning": "Tone is too casual"},
         {"safety_passed": True, "reasoning": "Looks good"}
@@ -108,4 +125,6 @@ async def test_reflexion_loop_recovers(mock_gemini_class):
 
     assert result["safety_check_passed"] is True
     assert result["revision_count"] == 1
-    assert mock_gemini.generate_content.call_count == 2
+    # Check that either chat_with_context or generate_content was called twice
+    total_calls = mock_gemini.generate_content.call_count + mock_gemini.chat_with_context.call_count
+    assert total_calls == 2

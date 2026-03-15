@@ -24,6 +24,7 @@ class UserSettings(Base):
     user_email = Column(String, unique=True, index=True)
     briefing_time = Column(String, default="08:00")
     timezone = Column(String, default="UTC")
+    cache_id = Column(String, nullable=True)
 
 
 class BriefingLog(Base):

@@ -15,8 +15,13 @@ from src.adapters.config import get_providers
 from src.core.graph import AuricleGraph
 from src.services.gemini import GeminiService
 from src.services.elevenlabs import ElevenLabsService
+from src.db.models.base import Base
+from src.db.session import engine
 
 load_dotenv()
+
+# Auto-create tables (including our new UserSettings column)
+Base.metadata.create_all(bind=engine)
 
 
 @asynccontextmanager
@@ -37,11 +42,12 @@ class BriefingRequest(BaseModel):
     """Request model for /api/v1/briefings/generate"""
     user_email: str
     env: str = "dev"
-    profile_path: str = "scripts/user_profile_sample.txt"
+    profile_path: str = "scripts/system_profile_sample.txt"
 
 
 @app.post("/api/v1/briefings/generate")
-async def generate_briefing(req: BriefingRequest, background_tasks: BackgroundTasks):
+async def generate_briefing(req: BriefingRequest,
+                            background_tasks: BackgroundTasks):
     """Generate a contextual briefing for a user."""
     # pylint: disable=too-many-locals,too-many-statements
     print("Generating briefing for user: ", req.user_email)
@@ -49,6 +55,8 @@ async def generate_briefing(req: BriefingRequest, background_tasks: BackgroundTa
     # Inject dynamic persona from UI
     if req.profile_path:
         os.environ["USER_PROFILE_PATH"] = req.profile_path
+
+    os.environ["USER_EMAIL"] = req.user_email
 
     providers = get_providers(env=req.env)
 
@@ -95,7 +103,8 @@ async def generate_briefing(req: BriefingRequest, background_tasks: BackgroundTa
                                 timing_metrics[node_name] = round(elapsed)
                                 start_time = current_time  # Reset cursor for next node
                                 final_state.update(state_update)
-                                print(f"[{node_name}] finished in {timing_metrics[node_name]}ms")
+                                print(
+                                    f"[{node_name}] finished in {timing_metrics[node_name]}ms")
                 # Add overall TTFT after stream finishes
                 timing_metrics["Total"] = sum(timing_metrics.values())
 
@@ -111,47 +120,45 @@ async def generate_briefing(req: BriefingRequest, background_tasks: BackgroundTa
         final_state = await graph.ainvoke(initial_state)
         timing_metrics = {"fallback": 0}
 
-    # Create Context Cache for Deep Dive Follow-ups
-    gemini = GeminiService()
+    # Extract cache_id from the DB as a fallback or fetch it from UserSettings.
+    # pylint: disable=import-outside-toplevel
+    from src.db.session import SessionLocal
+    from src.db.models.base import UserSettings
 
-    # In a scalable production system, this would query a dedicated Users Database via user_id.
-    # For now, it dynamically fetches from an environment path, decoupling state
-    # from code directories.
-    profile_path = os.environ.get("USER_PROFILE_PATH")
-    if profile_path and os.path.exists(profile_path):
-        with open(profile_path, "r", encoding="utf-8") as f:
-            user_profile = f.read()
-    else:
-        user_profile = "User Profile: Executive leadership. Tone: Professional and concise."
+    db = SessionLocal()
+    cache_id = None
+    try:
+        user_settings = db.query(UserSettings).filter(
+            UserSettings.user_email == req.user_email).first()
+        if user_settings:
+            cache_id = user_settings.cache_id
+    finally:
+        db.close()
 
-    dynamic_content = (
-        f"EMAILS:\n{chr(10).join(final_state.get('email_summaries', []))}\n\n"
-        f"CALENDAR:\n{chr(10).join(final_state.get('calendar_events', []))}"
-    )
+    print("✅ Briefing generated successfully.")
+    print(f"✅ Cache ID established: {cache_id}")
 
-    cache_id = gemini.create_cached_context(
-        system_instruction="You are an AI Executive Assistant helping summarize daily context.",
-        user_profile_text=user_profile,
-        dynamic_data=dynamic_content)
-
-    async def generate_audio_background(briefing_text: str):
+    async def generate_audio_background(briefing_text: str, safety_passed: bool):
         """Background task to synthesize audio asynchronously."""
         if not briefing_text:
             return
 
         try:
-            gemini_svc = GeminiService()
-            prompt = (
-                "You are an expert voice scriptwriter. Take the following daily briefing "
-                "and rewrite it to be read out loud naturally by a text-to-speech engine. "
-                "Remove all markdown formatting, bullet points, asterisks, "
-                "and special characters.\n"
-                "Ensure the flow is conversational, warm, and professional, "
-                "as if spoken by a human assistant.\n"
-                "Write out numbers plainly (e.g., 'three thirty PM' instead of '3:30').\n\n"
-                f"Original Briefing:\n{briefing_text}"
-            )
-            spoken_text = gemini_svc.generate_content(prompt)
+            if safety_passed:
+                gemini_svc = GeminiService()
+                prompt = (
+                    "You are an expert voice scriptwriter. Take the following daily briefing "
+                    "and rewrite it to be read out loud naturally by a text-to-speech engine. "
+                    "Remove all markdown formatting, bullet points, asterisks, "
+                    "and special characters.\n"
+                    "Ensure the flow is conversational, warm, and professional, "
+                    "as if spoken by a human assistant.\n"
+                    "Write out numbers plainly (e.g., 'three thirty PM' instead of '3:30').\n\n"
+                    f"Original Briefing:\n{briefing_text}"
+                )
+                spoken_text = gemini_svc.generate_content(prompt)
+            else:
+                spoken_text = briefing_text
 
             eleven = ElevenLabsService()
             audio_bytes = eleven.generate_audio_stream(spoken_text)
@@ -162,8 +169,10 @@ async def generate_briefing(req: BriefingRequest, background_tasks: BackgroundTa
             print(f"⚠️ Background Task: Audio synthesis failed: {e}")
 
     # Kick off TTS concurrently so TTFT resolves instantly
-    background_tasks.add_task(generate_audio_background, final_state.get("briefing"))
-
+    background_tasks.add_task(
+        generate_audio_background,
+        final_state.get("briefing"),
+        final_state.get("safety_check_passed"))
 
     return {
         "status": "success",
@@ -189,8 +198,13 @@ async def chat_briefing(req: ChatRequest):
             status_code=400,
             detail="cache_id is required for deep-dive chat.")
 
+    print(f"💬 Deep dive chat requested with cache: {req.cache_id}")
+    print(f"User Message: {req.message}")
+
     gemini = GeminiService()
     response = gemini.chat_with_context(req.cache_id, req.message)
+
+    print("✅ Deep dive chat response generated successfully.")
 
     return {
         "status": "success",
@@ -200,6 +214,7 @@ async def chat_briefing(req: ChatRequest):
 
 # Mount React Frontend to Root
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+
 
 @app.get("/health")
 async def health_check():

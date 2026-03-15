@@ -17,3 +17,4 @@ class AgentState(TypedDict):
     revision_count: int
     critic_feedback: str
     timing_metrics: dict[str, float]
+    user_profile_version: str

@@ -1,7 +1,7 @@
 const { useState, useEffect, useRef } = React;
 
 function App() {
-  const [profilePath, setProfilePath] = useState("scripts/user_profile_sample.txt");
+  const [profilePath, setProfilePath] = useState("scripts/system_profile_sample.txt");
   const [isGenerating, setIsGenerating] = useState(false);
   const [cacheId, setCacheId] = useState(null);
   const [result, setResult] = useState(null);
@@ -50,7 +50,8 @@ function App() {
     "Fetching Latest Emails",
     "Fetching Calendar Events",
     "Gemini Synthesis",
-    "Reflexion Safety Diagnostics"
+    "Reflexion Safety Diagnostics",
+    "Finalizing Audio & Response"
   ];
 
   useEffect(() => {
@@ -63,7 +64,15 @@ function App() {
         currentIndex++;
         if (currentIndex < executionNodes.length) {
           setActiveNodeIndex(currentIndex);
-          const nextDelay = Math.floor(Math.random() * 2000) + 1000;
+          const nodeName = executionNodes[currentIndex];
+          let nextDelay = Math.floor(Math.random() * 1000) + 1000;
+          if (nodeName === "Gemini Synthesis") {
+            nextDelay = 6000;
+          } else if (nodeName === "Reflexion Safety Diagnostics") {
+            nextDelay = 3500;
+          } else if (nodeName === "Finalizing Audio & Response") {
+            nextDelay = 2000;
+          }
           timer = setTimeout(simulateProgress, nextDelay);
         }
       };
@@ -153,11 +162,22 @@ function App() {
                 <div className="node-details">
                   <span className="node-label">[{nodeName}]</span>
                   <span className="node-time" style={{float: "right", color: "#666", marginLeft: "10px"}}>
-                     TTFT: {(timeMs / 1000).toFixed(2)}s
+                     Latency: {(timeMs / 1000).toFixed(2)}s
                   </span>
                 </div>
               </div>
             ))}
+            <div className="node-item complete" style={{ borderLeftColor: "#8b5cf6" }}>
+              <div className="node-icon" style={{ backgroundColor: "#8b5cf6", borderColor: "#8b5cf6", color: "white" }}>⚡</div>
+              <div className="node-details">
+                <span className="node-label" style={{ color: "#8b5cf6", fontWeight: "600" }}>
+                  [finalizing_audio] <small style={{ fontWeight: "normal", opacity: 0.8 }}>(Not part of LangGraph)</small>
+                </span>
+                <span className="node-time" style={{float: "right", color: "#8b5cf6", marginLeft: "10px", fontWeight: "500"}}>
+                   Latency: Async
+                </span>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -183,7 +203,7 @@ function App() {
               onChange={(e) => setProfilePath(e.target.value)}
               disabled={isGenerating}
             >
-              <option value="scripts/user_profile_sample.txt">VP of Engineering (Sample)</option>
+              <option value="scripts/system_profile_sample.txt">VP of Engineering (Sample)</option>
               <option value="scripts/test_user.txt">Test Persona</option>
             </select>
           </div>
