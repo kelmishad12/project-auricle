@@ -10,6 +10,6 @@ if [ ! -f "$VENV_PYTHON" ]; then
 fi
 
 echo "Running Pylint..."
-PYTHONPATH=$PWD $VENV_PYTHON -m pylint src/ server.py scripts/ --disable=C0114,C0115,C0116,W0511
+PYTHONPATH=$PWD $VENV_PYTHON -m pylint $(git ls-files '*.py')
 
 exit $?

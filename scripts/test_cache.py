@@ -1,3 +1,6 @@
+"""
+Test script for Vertex AI caching functionality.
+"""
 import os
 import json
 from dotenv import load_dotenv
@@ -5,6 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def test_caching():
+    """Verify context caching modules load correctly."""
     cred_path = os.environ.get("GEMINI_VERTEX_AI_CREDENTIALS")
     if cred_path:
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = cred_path
