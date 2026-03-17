@@ -176,28 +176,19 @@ class GeminiService(LLMProvider):
             return f"Mocked cached response for: {prompt}"
 
         try:
-            # Initialize a model specific to this cached context
             model = genai.GenerativeModel.from_cached_content(
                 cached_content=cache_name
             )
 
-            # Generate the fast response with strict constraints
             generation_config = genai.types.GenerationConfig(
                 temperature=0.2,        # Keep it highly deterministic and focused
             )
 
-            # Augment the prompt to explicitly override the cache's daily briefing instructions
             augmented_prompt = (
-                "IMPORTANT DIRECTIVE: Ignore the previous instruction to "
-                "'Create a daily briefing'.\n"
-                "You are now acting as a direct Question & Answer assistant "
-                "for the provided context.\n"
-                "Provide a highly concise, bulleted answer to the specific "
-                "user question below.\n"
-                "CRITICAL OVERRIDE: Do NOT output or summarize the user profile, "
-                "role, authority, or OKRs. Do NOT include any filler text, "
-                "greetings, or repeat the full context. ONLY answer the question.\n\n"
-                f"User Question: {prompt}"
+                "CRITICAL OVERRIDE: Ignore prior instruction to 'Create a daily briefing'. "
+                "Do NOT output the user profile, role, or OKRs. "
+                "Provide a bulleted, highly concise answer to the following question ONLY.\n\n"
+                f"Question: {prompt}"
             )
 
             response = model.generate_content(augmented_prompt, generation_config=generation_config)
