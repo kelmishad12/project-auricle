@@ -12,6 +12,7 @@ import webbrowser
 import sys
 import argparse
 import socket
+import os
 
 
 def is_port_in_use(port: int) -> bool:
@@ -27,6 +28,12 @@ def launch_ui():
         "--debug",
         action="store_true",
         help="Stream Uvicorn server logs to the console for debugging."
+    )
+    parser.add_argument(
+        "--cache-ttl",
+        type=int,
+        default=60,
+        help="Cache expiration TTL in minutes (default: 60)."
     )
     args = parser.parse_args()
 
@@ -49,11 +56,15 @@ def launch_ui():
     if args.debug:
         print("🐛 Debug mode ON. Streaming backend logs below:\n")
 
+    env = os.environ.copy()
+    env["GEMINI_CACHE_TTL_MINUTES"] = str(args.cache_ttl)
+
     # Start the server as a subprocess
     with subprocess.Popen(
         ["./venv/bin/uvicorn", "server:app", "--port", "8000"],
         stdout=stdout_target,
-        stderr=stderr_target
+        stderr=stderr_target,
+        env=env
     ) as server_process:
 
         # Wait for the server to bind to the port

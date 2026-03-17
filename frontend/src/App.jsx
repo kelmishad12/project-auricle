@@ -16,6 +16,9 @@ function App() {
   const [isChatting, setIsChatting] = useState(false);
   const [chatError, setChatError] = useState(null);
 
+  const [evalMetrics, setEvalMetrics] = useState(null);
+  const [evalStatus, setEvalStatus] = useState("idle"); // idle, pending, running, completed, failed
+
   const handleChatSubmit = async () => {
     if (!chatInput.trim() || !cacheId) return;
     
@@ -84,6 +87,33 @@ function App() {
     }
   }, [isGenerating]);
 
+  // Polling for DeepEval Metrics
+  useEffect(() => {
+    let pollingTimer;
+    if (cacheId && (evalStatus === "pending" || evalStatus === "running")) {
+      const pollEvals = async () => {
+        try {
+          const response = await fetch(`/api/v1/briefings/evals/${cacheId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setEvalStatus(data.status);
+            if (data.status === "completed" || data.status === "failed") {
+              setEvalMetrics(data.metrics);
+            } else {
+              pollingTimer = setTimeout(pollEvals, 2000);
+            }
+          } else {
+            pollingTimer = setTimeout(pollEvals, 2000);
+          }
+        } catch (e) {
+          pollingTimer = setTimeout(pollEvals, 2000);
+        }
+      };
+      pollingTimer = setTimeout(pollEvals, 2000);
+    }
+    return () => clearTimeout(pollingTimer);
+  }, [cacheId, evalStatus]);
+
   const handleGenerate = async () => {
     setIsGenerating(true);
     setError(null);
@@ -91,6 +121,8 @@ function App() {
     setTimingMetrics({});
     setCacheId(null);
     setAudioUrl(null);
+    setEvalMetrics(null);
+    setEvalStatus("pending");
 
     try {
       const response = await fetch("/api/v1/briefings/generate", {
@@ -184,6 +216,70 @@ function App() {
     );
   };
 
+  const EvalDiagnosticsPanel = () => {
+    if (!cacheId) return null;
+
+    if (evalStatus === "pending" || evalStatus === "running") {
+      return (
+        <div className="eval-panel glass-panel fade-in">
+          <div className="eval-header">
+            <h3>DeepEval Diagnostics</h3>
+            <div className="eval-spinner-container">
+              <span className="eval-spinner"></span>
+              <span style={{color: "#666", fontSize: "0.9rem"}}>Evaluating pipeline outputs...</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (evalStatus === "failed" || !evalMetrics) {
+      return (
+        <div className="eval-panel glass-panel fade-in">
+          <h3>DeepEval Diagnostics</h3>
+          <p style={{color: "#ea4335"}}>Evaluation failed or timed out.</p>
+        </div>
+      );
+    }
+
+    const { faithfulness, answer_relevance, hallucination } = evalMetrics;
+    
+    const MetricCard = ({ title, metric }) => {
+      const scoreNum = (metric && metric.score) ? metric.score : 0;
+      const isGood = scoreNum >= 0.7;
+      return (
+        <div className="metric-card">
+          <div className="metric-title">{title}</div>
+          <div className="metric-score" style={{color: isGood ? "#34a853" : "#ea4335"}}>
+            {(scoreNum * 100).toFixed(0)}%
+          </div>
+          {(metric && metric.reasoning) && (
+            <div className="metric-reasoning" title={metric.reasoning}>
+              {metric.reasoning.length > 80 ? metric.reasoning.substring(0, 80) + '...' : metric.reasoning}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <div className="eval-panel glass-panel fade-in">
+        <div className="eval-header">
+          <h3>DeepEval Diagnostics</h3>
+          <span className="eval-badge">Quantitative Unit Tests</span>
+        </div>
+        <p style={{fontSize: "0.85rem", color: "#666", marginBottom: "15px"}}>
+          Metrics mapped against Context Cache (ID: <code>{cacheId}</code>) evaluating source adherence and logic safety.
+        </p>
+        <div className="eval-metrics-grid">
+           <MetricCard title="Faithfulness" metric={faithfulness} />
+           <MetricCard title="Answer Relevance" metric={answer_relevance} />
+           <MetricCard title="Hallucination" metric={hallucination} />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="app-container">
       <header className="navbar">
@@ -217,7 +313,7 @@ function App() {
           </button>
         </div>
 
-        <PipelineProgress />
+        {PipelineProgress()}
 
         {error && (
           <div className="error-panel glass-panel">
@@ -239,6 +335,8 @@ function App() {
                 <audio controls src={audioUrl} />
               </div>
             )}
+            
+            {EvalDiagnosticsPanel()}
             
             <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(result) }} />
           </div>

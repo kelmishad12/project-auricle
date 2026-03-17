@@ -107,6 +107,10 @@ async def synthesize_briefing(state: AgentState, config: RunnableConfig):
 
         cache_id = settings.cache_id
 
+        if cache_id and not gemini.validate_cache(cache_id):
+            print(f"DEBUG nodes.py: Cache {cache_id} is invalid/expired. Creating a new one.")
+            cache_id = None
+
         # If we have no cache_id, we MUST create one and save it permanently.
         if not cache_id:
             system_instruction = (

@@ -27,13 +27,16 @@ class LLMProvider(Protocol):
             dynamic_data: str) -> Optional[str]:
         """Cache static data plus dynamic data to optimize multi-turn QA."""
 
+    def validate_cache(self, cache_name: str) -> bool:
+        """Validate if the context cache is still valid."""
+
     def chat_with_context(self, cache_name: str, prompt: str) -> str:
         """Query the cached context via the LLM to get an answer."""
 
 
 class GeminiService(LLMProvider):
     """
-    Concrete implementation of Gemini 1.5 Flash.
+    Concrete implementation of Gemini 2.5 Flash.
     Leverages LangGraph orchestration for structural reasoning.
     """
 
@@ -62,7 +65,7 @@ class GeminiService(LLMProvider):
     def generate_content(self, prompt: str) -> str:
         """Generate text using Gemini."""
         if self.is_mocked:
-            return "Gemini 1.5 Flash synthesized content. (Mocked - No Credentials)"
+            return "Gemini 2.5 Flash synthesized content. (Mocked - No Credentials)"
         response = self.model.generate_content(prompt)
         return response.text
 
@@ -140,11 +143,12 @@ class GeminiService(LLMProvider):
             # The TTL manages when Google automatically purges the cache from VRAM.
             # E.g., The context is refreshed daily, so a 60 min TTL covers a
             # standard chat session.
+            ttl_minutes = int(os.environ.get("GEMINI_CACHE_TTL_MINUTES", "60"))
             cached_content = caching.CachedContent.create(
                 model=f"models/{MODEL_NAME}",
                 system_instruction=system_instruction,
                 contents=[full_context],
-                ttl=datetime.timedelta(minutes=60),
+                ttl=datetime.timedelta(minutes=ttl_minutes),
             )
             print(
                 f"✅ Context Cache created successfully: {cached_content.name}")
@@ -152,6 +156,18 @@ class GeminiService(LLMProvider):
         except Exception as e:
             print(f"⚠️ Cache creation failed: {e}")
             return None
+
+    def validate_cache(self, cache_name: str) -> bool:
+        """Validate if the cache still exists and is not expired."""
+        if self.is_mocked:
+            return True
+
+        try:
+            caching.CachedContent.get(cache_name)
+            return True
+        except Exception as e:
+            print(f"⚠️ Cache validation failed: {e}")
+            return False
 
     def chat_with_context(self, cache_name: str, prompt: str) -> str:
         """Generate response against a pre-warmed context cache.
@@ -172,4 +188,7 @@ class GeminiService(LLMProvider):
             return response.text
         except Exception as e:
             print(f"⚠️ Cached chat failed: {e}")
-            return f"Error querying context cache: {e}"
+            return (
+                "Error: The context cache has expired or is invalid. "
+                "Please generate a new briefing."
+            )
