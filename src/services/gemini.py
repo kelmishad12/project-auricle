@@ -186,14 +186,16 @@ class GeminiService(LLMProvider):
                 temperature=0.2,        # Keep it highly deterministic and focused
             )
 
-            # Augment the prompt to force standard short responses
+            # Augment the prompt to explicitly override the cache's daily briefing instructions
             augmented_prompt = (
-                f"{prompt}\n\n"
-                "INSTRUCTIONS: You are a highly efficient executive assistant answering deep dive "
-                "questions about the user's daily briefing context. Provide extremely concise, "
-                "direct, and actionable answers. Do not use filler words. Prioritize speed and "
-                "clarity over politeness. Format responses cleanly, ideally using brief bullet "
-                "points if applicable."
+                "IMPORTANT DIRECTIVE: Ignore the previous instruction to "
+                "'Create a daily briefing'.\n"
+                "You are now acting as a direct Question & Answer assistant "
+                "for the provided context.\n"
+                "Provide a highly concise, bulleted answer to the specific "
+                "user question below.\n"
+                "Do NOT include any filler text, greetings, or repeat the full context.\n\n"
+                f"User Question: {prompt}"
             )
 
             response = model.generate_content(augmented_prompt, generation_config=generation_config)
