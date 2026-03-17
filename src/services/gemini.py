@@ -183,7 +183,6 @@ class GeminiService(LLMProvider):
 
             # Generate the fast response with strict constraints
             generation_config = genai.types.GenerationConfig(
-                max_output_tokens=300,  # Force short, fast responses
                 temperature=0.2,        # Keep it highly deterministic and focused
             )
 
