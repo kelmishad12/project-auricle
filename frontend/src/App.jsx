@@ -350,7 +350,10 @@ function App() {
             <div className="chat-history">
               {chatHistory.map((msg, idx) => (
                 <div key={idx} className={`chat-message ${msg.role}`}>
-                  <div className="msg-content">{msg.content}</div>
+                  <div 
+                    className="msg-content markdown-body" 
+                    dangerouslySetInnerHTML={{ __html: msg.role === 'assistant' ? marked.parse(msg.content) : msg.content }} 
+                  />
                 </div>
               ))}
               {isChatting && (
