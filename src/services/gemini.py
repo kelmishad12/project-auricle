@@ -194,7 +194,9 @@ class GeminiService(LLMProvider):
                 "for the provided context.\n"
                 "Provide a highly concise, bulleted answer to the specific "
                 "user question below.\n"
-                "Do NOT include any filler text, greetings, or repeat the full context.\n\n"
+                "CRITICAL OVERRIDE: Do NOT output or summarize the user profile, "
+                "role, authority, or OKRs. Do NOT include any filler text, "
+                "greetings, or repeat the full context. ONLY answer the question.\n\n"
                 f"User Question: {prompt}"
             )
 
