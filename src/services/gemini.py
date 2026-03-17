@@ -181,10 +181,26 @@ class GeminiService(LLMProvider):
 
             # Initialize a model specific to this cached context
             model = genai.GenerativeModel.from_cached_content(
-                cached_content=cached_content)
+                cached_content=cached_content
+            )
 
-            # Generate the fast response
-            response = model.generate_content(prompt)
+            # Generate the fast response with strict constraints
+            generation_config = genai.types.GenerationConfig(
+                max_output_tokens=300,  # Force short, fast responses
+                temperature=0.2,        # Keep it highly deterministic and focused
+            )
+
+            # Augment the prompt to force standard short responses
+            augmented_prompt = (
+                f"{prompt}\n\n"
+                "INSTRUCTIONS: You are a highly efficient executive assistant answering deep dive "
+                "questions about the user's daily briefing context. Provide extremely concise, "
+                "direct, and actionable answers. Do not use filler words. Prioritize speed and "
+                "clarity over politeness. Format responses cleanly, ideally using brief bullet "
+                "points if applicable."
+            )
+
+            response = model.generate_content(augmented_prompt, generation_config=generation_config)
             return response.text
         except Exception as e:
             print(f"⚠️ Cached chat failed: {e}")
