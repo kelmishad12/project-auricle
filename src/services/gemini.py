@@ -176,12 +176,9 @@ class GeminiService(LLMProvider):
             return f"Mocked cached response for: {prompt}"
 
         try:
-            # Retrieve the cached reference
-            cached_content = caching.CachedContent.get(cache_name)
-
             # Initialize a model specific to this cached context
             model = genai.GenerativeModel.from_cached_content(
-                cached_content=cached_content
+                cached_content=cache_name
             )
 
             # Generate the fast response with strict constraints
