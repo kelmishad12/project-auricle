@@ -48,21 +48,12 @@ async def fetch_calendar(_state: AgentState, config: RunnableConfig):
 
 
 # pylint: disable=too-many-locals
-def synthesize_briefing(state: AgentState, config: RunnableConfig):
-    """Synthesize the final briefing contextually using Memory Tiering."""
-    gemini = GeminiService()
-
-    revision_count = state.get('revision_count', 0)
-    critic_feedback = state.get('critic_feedback', '')
-
-    # 1. Ephemeral Memory: Read System Instruction (User Profile)
+def build_profile_text() -> tuple[str, str]:
+    """Reads system instructions and builds semantic padding."""
     profile_path = "/Users/kelmishad/project-auricle/scripts/system_profile_sample.txt"
     with open(profile_path, "r", encoding="utf-8") as f:
         user_profile_text = f.read()
 
-    # The Gemini Caching API strictly requires >= 1024 tokens.
-    # We apply "Semantic Padding" (ADRs, schemas, Knowledge Base) as requested,
-    # repeating a core architectural philosophy to ensure we breach the threshold securely.
     semantic_padding = (
         "\n\n--- ARCHITECTURAL KNOWLEDGE BASE (SEMANTIC PADDING) ---\n"
         "Design Decision 1: This AI operates inside Project Auricle, a cutting-edge "
@@ -75,26 +66,29 @@ def synthesize_briefing(state: AgentState, config: RunnableConfig):
 
     user_profile_text += semantic_padding
 
-    # Extract version for observability
-    # Extract version for observability
     version_line = next(
         (line for line in user_profile_text.splitlines() if "[ID:" in line),
         ""
     )
+    version = "UNKNOWN"
     if "[ID:" in version_line:
-        user_profile_version = version_line.split(
-            "[ID:")[1].split("]")[0].strip()
-    else:
-        user_profile_version = "UNKNOWN"
+        version = version_line.split("[ID:")[1].split("]")[0].strip()
 
-    # 2. Working Memory: Active Gmail/Calendar Data
-    emails = chr(10).join(state.get('email_summaries', []))
-    calendar = chr(10).join(state.get('calendar_events', []))
-    dynamic_data = f"Emails:\n{emails}\n\nCalendar:\n{calendar}"
+    return user_profile_text, version
 
-    # 3. Permanent Memory: Postgres cache_id mapping
+
+def synthesize_briefing(state: AgentState, config: RunnableConfig):
+    """Synthesize the final briefing contextually using Memory Tiering."""
+    gemini = GeminiService()
+
+    revision_count = state.get('revision_count', 0)
+    critic_feedback = state.get('critic_feedback', '')
+
+    # Extract DB settings before disk I/O so we can shortcut
     user_email = os.environ.get("USER_EMAIL", "SHAWN_KELMI_VP_ENG")
     db: Session = SessionLocal()
+
+    fallback_profile, fallback_data, fallback_sys = "", "", ""
 
     try:
         settings = db.query(UserSettings).filter(
@@ -111,15 +105,23 @@ def synthesize_briefing(state: AgentState, config: RunnableConfig):
             print(f"DEBUG nodes.py: Cache {cache_id} is invalid/expired. Creating a new one.")
             cache_id = None
 
+        user_profile_version = "UNKNOWN"
+
         # If we have no cache_id, we MUST create one and save it permanently.
+        # Disk I/O and heavy string concatenation is ONLY done when cache is missed.
         if not cache_id:
+            user_profile_text, user_profile_version = build_profile_text()
+
+            emails = chr(10).join(state.get('email_summaries', []))
+            calendar = chr(10).join(state.get('calendar_events', []))
+            dynamic_data = f"Emails:\n{emails}\n\nCalendar:\n{calendar}"
+
             system_instruction = (
                 "You are an AI Executive Assistant. Create a concise, professional "
                 "daily briefing using the following data. Keep it under 5 minutes "
                 "when spoken."
             )
 
-            # Create a new cache that will expire based on TTL, but we save the id permanently
             new_cache_id = gemini.create_cached_context(
                 system_instruction=system_instruction,
                 user_profile_text=user_profile_text,
@@ -133,11 +135,13 @@ def synthesize_briefing(state: AgentState, config: RunnableConfig):
                 cache_id = new_cache_id
             else:
                 print("DEBUG nodes.py: create_cached_context returned None")
-
+                cache_id = None
+                fallback_profile = user_profile_text
+                fallback_data = dynamic_data
+                fallback_sys = system_instruction
     finally:
         db.close()
 
-    # Query the cache
     prompt = "Please draft today's briefing."
     if revision_count > 0 and critic_feedback:
         prompt += (
@@ -149,8 +153,8 @@ def synthesize_briefing(state: AgentState, config: RunnableConfig):
         briefing = gemini.chat_with_context(cache_id, prompt)
     else:
         fallback_prompt = (
-            f"{system_instruction}\n\n{user_profile_text}\n\n"
-            f"{dynamic_data}\n\n{prompt}"
+            f"{fallback_sys}\n\n{fallback_profile}\n\n"
+            f"{fallback_data}\n\n{prompt}"
         )
         briefing = gemini.generate_content(fallback_prompt)
 
