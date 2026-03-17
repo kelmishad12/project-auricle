@@ -54,7 +54,7 @@ class EvalService:
 
             print("⏳ DeepEval evaluate() running...")
             # evaluate() returns a list of TestResult objects
-            _results = evaluate([test_case], [faithfulness, answer_relevancy, hallucination], print_results=False)
+            _results = evaluate([test_case], [faithfulness, answer_relevancy, hallucination])
 
             # Extract scores and reasoning from the metrics explicitly since evaluate() aggregates them
             eval_record.faithfulness_score = faithfulness.score
