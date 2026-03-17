@@ -10,8 +10,8 @@ the mid-execution memory of the underlying agent) is handled automatically by
 """
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, Float, ForeignKey
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, Float
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
@@ -44,17 +44,16 @@ class EvalMetrics(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     cache_id = Column(String, index=True, unique=True, nullable=False)
-    
     # Quantitative Scores (0.0 to 1.0)
     faithfulness_score = Column(Float, nullable=True)
     answer_relevance_score = Column(Float, nullable=True)
     hallucination_score = Column(Float, nullable=True)
-    
+
     # Qualitative Reasoning
     faithfulness_reasoning = Column(Text, nullable=True)
     answer_relevance_reasoning = Column(Text, nullable=True)
     hallucination_reasoning = Column(Text, nullable=True)
-    
+
     # Status tracking (e.g., 'pending', 'completed', 'failed')
     status = Column(String, default="pending")
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -2,45 +2,46 @@
 Run DeepEval against a synthetic Golden Dataset of "Tricky Days"
 to establish quantitative safety and performance metrics.
 """
-import asyncio
+# pylint: disable=line-too-long,arguments-differ
 import os
 from dotenv import load_dotenv
 from deepeval.metrics import FaithfulnessMetric, HallucinationMetric
 from deepeval.metrics.answer_relevancy.answer_relevancy import AnswerRelevancyMetric
 from deepeval.test_case import LLMTestCase
 from deepeval import evaluate
+from deepeval.models.base_model import DeepEvalBaseLLM
+from src.services.gemini import GeminiService
 
 load_dotenv()
 
-# We patch the default OpenAI dependence for DeepEval by wrapping our 
-# existing Gemini 2.5 Flash service as a DeepEval model if needed, 
+# We patch the default OpenAI dependence for DeepEval by wrapping our
+# existing Gemini 2.5 Flash service as a DeepEval model if needed,
 # or just setting OPENAI_API_KEY for simplicity if litellm works.
 # But for the hackathon, we will instantiate the metrics and run them locally.
 # Warning: DeepEval heavily biases to OpenAI, so we might need a custom model wrapper.
 # For this script we will configure it to use our own custom model wrapper.
 
-from deepeval.models.base_model import DeepEvalBaseLLM
-from src.services.gemini import GeminiService
-
 class GeminiDeepEvalWrapper(DeepEvalBaseLLM):
+    """Wrapper for Gemini service to act as DeepEval model."""
     def __init__(self):
-        # Initialize GeminiService before calling super().__init__ 
+        # Initialize GeminiService before calling super().__init__
         # so that it's available when DeepEvalBaseLLM calls load_model()
         self.service = GeminiService()
         super().__init__()
 
-    def load_model(self):
+    def load_model(self, *args, **kwargs):
         return self.service.model
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, *args, **kwargs) -> str:
         return self.service.generate_content(prompt)
 
-    async def a_generate(self, prompt: str) -> str:
+    async def a_generate(self, prompt: str, *args, **kwargs) -> str:
         # Simplistic async wrapper for the sync generation
         return self.generate(prompt)
 
-    def get_model_name(self):
+    def get_model_name(self, *args, **kwargs):
         return "gemini-2.5-flash"
+
 
 def create_golden_dataset():
     """Create a dataset of 'Tricky Days' for evaluation."""
@@ -137,14 +138,15 @@ hallucination = HallucinationMetric(
 )
 
 def run_evaluations():
+    """Run predefined evaluations over golden dataset."""
     print("🚀 Starting Golden Dataset Evals ('Tricky Days')...")
     dataset = create_golden_dataset()
     test_cases = []
-    
+
     # Normally we would call our Auricle agent here to get the actual_output,
     # but for a synthetic unit test demonstration without spinning up the network,
     # we'll mock the actual outputs as if the agent generated them perfectly.
-    
+
     for item in dataset:
         context_str = "\\n".join(item["emails"] + item["calendar"])
         test_case = LLMTestCase(
@@ -160,10 +162,10 @@ def run_evaluations():
     try:
         evaluate(test_cases, [faithfulness, answer_relevancy, hallucination])
         print("✅ Evals Completed.")
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-exception-caught
         print(f"⚠️ Eval run hit an exception (likely API limits): {e}")
 
 if __name__ == "__main__":
     if not os.environ.get("GEMINI_API_KEY"):
-         print("Warning: GEMINI_API_KEY is not set. DeepEval may fail.")
+        print("Warning: GEMINI_API_KEY is not set. DeepEval may fail.")
     run_evaluations()

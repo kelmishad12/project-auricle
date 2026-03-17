@@ -10,6 +10,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning, module="deepeval")
 warnings.filterwarnings("ignore", module="urllib3")
 
+# pylint: disable=wrong-import-position
 from contextlib import asynccontextmanager
 
 from langgraph.checkpoint.memory import MemorySaver
@@ -186,7 +187,7 @@ async def generate_briefing(req: BriefingRequest,
     context_list = final_state.get("email_summaries", []) + final_state.get("calendar_events", [])
     if not context_list:
         context_list = ["No context found."]
-        
+
     if cache_id:
         background_tasks.add_task(
             EvalService.run_live_eval,
@@ -239,13 +240,12 @@ async def get_evals(cache_id: str):
     # pylint: disable=import-outside-toplevel
     from src.db.session import SessionLocal
     from src.db.models.base import EvalMetrics
-    
     db = SessionLocal()
     try:
         record = db.query(EvalMetrics).filter(EvalMetrics.cache_id == cache_id).first()
         if not record:
             return {"status": "pending", "message": "Evaluation not started or missing."}
-            
+
         return {
             "status": record.status,
             "metrics": {
