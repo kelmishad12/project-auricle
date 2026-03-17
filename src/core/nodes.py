@@ -48,7 +48,7 @@ async def fetch_calendar(_state: AgentState, config: RunnableConfig):
 
 
 # pylint: disable=too-many-locals
-async def synthesize_briefing(state: AgentState, config: RunnableConfig):
+def synthesize_briefing(state: AgentState, config: RunnableConfig):
     """Synthesize the final briefing contextually using Memory Tiering."""
     gemini = GeminiService()
 
@@ -162,7 +162,7 @@ async def synthesize_briefing(state: AgentState, config: RunnableConfig):
 # pylint: disable=unused-argument
 
 
-async def reflexion_loop(state: AgentState, config: RunnableConfig):
+def reflexion_loop(state: AgentState, config: RunnableConfig):
     """Enforce strict Safety/Privacy protocols via a Reflexion loop."""
     gemini = GeminiService()
 
@@ -189,7 +189,7 @@ async def reflexion_loop(state: AgentState, config: RunnableConfig):
 # pylint: disable=unused-argument
 
 
-async def safe_mode_fallback(_state: AgentState, config: RunnableConfig):
+def safe_mode_fallback(_state: AgentState, config: RunnableConfig):
     """Fallback node if the reflexion loop fails 3 times."""
     print("[Safe Mode] Agent failed safety checks too many times. Falling back to safe output.")
     safe_briefing = (
