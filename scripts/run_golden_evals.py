@@ -33,9 +33,13 @@ class GeminiDeepEvalWrapper(DeepEvalBaseLLM):
         return self.service.model
 
     def generate(self, prompt: str, *args, **kwargs) -> str:
+        if "schema" in kwargs:
+            raise TypeError("Schema generation not supported by this wrapper fallback.")
         return self.service.generate_content(prompt)
 
     async def a_generate(self, prompt: str, *args, **kwargs) -> str:
+        if "schema" in kwargs:
+            raise TypeError("Schema generation not supported by this wrapper fallback.")
         # Simplistic async wrapper for the sync generation
         return self.generate(prompt)
 
