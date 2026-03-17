@@ -20,7 +20,7 @@ Project Auricle serves as a comprehensive architectural blueprint and implementa
 │    │    └── tools.py   # Extracted tools for LLM use
 │    ├── /services   # Concrete Services and Google integrations
 │    │    ├── google.py      # Google Services (OAuth, Gmail & Calendar SDKs)
-│    │    ├── gemini.py      # Gemini 1.5 Flash Integration
+│    │    ├── gemini.py      # Gemini 2.5 Flash Integration
 │    │    └── elevenlabs.py  # ElevenLabs Text-to-Speech
 │    ├── /adapters   # Config & Mock Injection
 │    │    ├── localmock.py          # Uses mock (Private/GitIgnored)
@@ -80,6 +80,19 @@ GEMINI_VERTEX_AI_CREDENTIALS="/path/to/gemini-service-account-key.json"
 ELEVENLABS_API_KEY="<From ElevenLabs Dashboard>"
 DATABASE_URL="postgresql://user:password@localhost:5432/auricle"
 ```
+
+## DeepEval Quantitative Evaluation Pipeline
+
+To upgrade from subjective "vibe-checks" to rigorous engineering standards, Project Auricle integrates the **DeepEval** framework to score daily briefings across three primary metrics natively:
+- **Faithfulness**: Measures if the briefing is factually consistent with the source emails and calendar events.
+- **Answer Relevancy**: Measures if the briefing effectively addresses the user's implicit intent.
+- **Hallucination**: Directly penalizes any generated information not present in the retrieval context.
+
+### Live Diagnostic Dashboard
+Evaluations run as a non-blocking background task. Once the Time-to-First-Token (TTFT) audio completes, a React-based `EvalDiagnosticsPanel` actively polls the `/api/v1/briefings/evals/{cache_id}` endpoint. The UI visualizes the evaluated metrics, rendering the scores and specific reasoning metrics dynamically without introducing inference latency to the user.
+
+### Unit Testing via Golden Dataset
+To ensure continuous integration safety, a standalone synthetic dataset (`scripts/run_golden_evals.py`) features 10 "Tricky Days" (such as conflicting meetings, phishing attempts, or infrastructure alerts). This dataset serves as a rigorous testing suite simulating the LangGraph agent logic against the DeepEval baseline in an isolated unit-testing environment.
 
 ## Context Caching for Deep Dive Q&A
 To enable low-latency, low-cost multi-turn Q&A, Project Auricle implements **Context Caching** using Gemini 2.5 Flash (`models/gemini-2.5-flash`).

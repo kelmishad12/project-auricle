@@ -3,6 +3,13 @@ Main server implementation for Project Auricle.
 Provides agentic API for contextual briefings.
 """
 import os
+import warnings
+
+# Suppress annoying library warnings for a cleaner console
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning, module="deepeval")
+warnings.filterwarnings("ignore", module="urllib3")
+
 from contextlib import asynccontextmanager
 
 from langgraph.checkpoint.memory import MemorySaver
@@ -15,6 +22,7 @@ from src.adapters.config import get_providers
 from src.core.graph import AuricleGraph
 from src.services.gemini import GeminiService
 from src.services.elevenlabs import ElevenLabsService
+from src.services.evals import EvalService
 from src.db.models.base import Base
 from src.db.session import engine
 
@@ -174,6 +182,20 @@ async def generate_briefing(req: BriefingRequest,
         final_state.get("briefing"),
         final_state.get("safety_check_passed"))
 
+    # Also kick off the DeepEval background evaluation
+    context_list = final_state.get("email_summaries", []) + final_state.get("calendar_events", [])
+    if not context_list:
+        context_list = ["No context found."]
+        
+    if cache_id:
+        background_tasks.add_task(
+            EvalService.run_live_eval,
+            cache_id=cache_id,
+            input_text="Summarize my day and prioritize critical items.",
+            actual_output=final_state.get("briefing", ""),
+            retrieval_context=context_list
+        )
+
     return {
         "status": "success",
         "briefing": final_state.get("briefing"),
@@ -210,6 +232,39 @@ async def chat_briefing(req: ChatRequest):
         "status": "success",
         "answer": response
     }
+
+@app.get("/api/v1/briefings/evals/{cache_id:path}")
+async def get_evals(cache_id: str):
+    """Retrieve DeepEval metrics for a specific briefing cache."""
+    # pylint: disable=import-outside-toplevel
+    from src.db.session import SessionLocal
+    from src.db.models.base import EvalMetrics
+    
+    db = SessionLocal()
+    try:
+        record = db.query(EvalMetrics).filter(EvalMetrics.cache_id == cache_id).first()
+        if not record:
+            return {"status": "pending", "message": "Evaluation not started or missing."}
+            
+        return {
+            "status": record.status,
+            "metrics": {
+                "faithfulness": {
+                    "score": record.faithfulness_score,
+                    "reasoning": record.faithfulness_reasoning
+                },
+                "answer_relevance": {
+                    "score": record.answer_relevance_score,
+                    "reasoning": record.answer_relevance_reasoning
+                },
+                "hallucination": {
+                    "score": record.hallucination_score,
+                    "reasoning": record.hallucination_reasoning
+                }
+            }
+        }
+    finally:
+        db.close()
 
 
 # Mount React Frontend to Root

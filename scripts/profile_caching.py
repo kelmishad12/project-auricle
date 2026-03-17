@@ -121,7 +121,7 @@ def main():
     print(f"Uncached Turn Token Count : {uncached_tokens:,}")
     print(f"Cached Turn Token Count   : {cached_tokens:,}")
 
-    # Cost calculation based on typical 1.5 flash metrics
+    # Cost calculation based on typical 2.5 flash metrics
     print("\n* While the token counts in the metadata might look similar,")
     print("Google Cloud billing applies an explicit >80% volume discount")
     print("to all tokens processed via GenerativeModel.from_cached_content().")

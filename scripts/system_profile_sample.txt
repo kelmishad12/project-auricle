@@ -29,7 +29,7 @@
 # It replaces generic padding with functional project constraints.
 
 ### ARCHITECTURAL GLOSSARY
-- **Supervisor-Worker Pattern:** Hierarchical routing logic using Gemini 1.5 Flash.
+- **Supervisor-Worker Pattern:** Hierarchical routing logic using Gemini 2.5 Flash.
 - **The Mullet Strategy:** Decoupling of public Cloud Run UI from internal Localhost logic.
 - **Hexagonal Ports:** IMailProvider and ICalendarProvider protocols for testing.
 - **Reflexion Loop:** Self-correction node that critiques draft briefings for safety.
