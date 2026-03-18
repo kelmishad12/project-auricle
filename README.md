@@ -1,6 +1,10 @@
 # Project Auricle
 
-Project Auricle serves as a comprehensive architectural blueprint and implementation strategy for a Contextual Briefing Bot (Agentic Edition). This system is not merely a summarization tool but a Stateful Multi-Agent orchestration (LangGraph) to perform active reasoning and autonomously navigate a user's digital ecosystem comprising Google Workspace entities such as Gmail and Calendar to synthesize coherent, actionable, and enforces strict Safety/Privacy protocols via a Reflexion loop before delivering the final output daily briefings delivered via low-latency audio.
+Project Auricle serves as a comprehensive architectural blueprint and implementation strategy for a Contextual Briefing Bot (Agentic Edition). This system is not merely a summarization tool but a Stateful Multi-Agent orchestration (LangGraph) to perform active reasoning and autonomously navigate a user's digital ecosystem comprising Google Workspace entities such as Gmail and Calendar to synthesize coherent, actionable, and enforces strict Safety/Privacy protocols via a Reflexion loop before delivering the final output daily briefings delivered via instantaneously streaming low-latency audio.
+
+## Key Features
+- **ElevenLabs Audio Streaming**: The Text-to-Speech (TTS) engine pipeline natively yields its byte array generator to a dynamic FastAPI `StreamingResponse` socket, unlocking practically zero Time-To-First-Token delay playback on the frontend without waiting for disk I/O.
+- **Natural Conversational Deep Dive Chat**: The Q&A LangGraph uses strict prompt overrides to ensure the cached assistant provides natural, exceptionally conversational, but highly concise responses.
 
 ## Architecture Structure
 
