@@ -14,7 +14,7 @@ class AgentState(TypedDict):
     briefing: str
     spoken_briefing: str
     safety_check_passed: bool
-    revision_count: int
     critic_feedback: str
+    critic_score: int
     timing_metrics: dict[str, float]
     user_profile_version: str

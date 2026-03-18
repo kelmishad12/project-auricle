@@ -19,6 +19,7 @@ function App() {
   const [evalMetrics, setEvalMetrics] = useState(null);
   const [evalStatus, setEvalStatus] = useState("idle");
   const [safetyPassed, setSafetyPassed] = useState(null);
+  const [criticScore, setCriticScore] = useState(null);
 
   const handleChatSubmit = async () => {
     if (!chatInput.trim() || !cacheId) return;
@@ -125,6 +126,7 @@ function App() {
     setEvalMetrics(null);
     setEvalStatus("pending");
     setSafetyPassed(null);
+    setCriticScore(null);
 
     try {
       const response = await fetch("/api/v1/briefings/generate", {
@@ -147,6 +149,7 @@ function App() {
       setTimingMetrics(data.timing_metrics || {});
       setCacheId(data.cache_id || "mock-cache-id");
       setSafetyPassed(data.safety_passed);
+      setCriticScore(data.critic_score);
       
       if (data.audio_path) {
         setAudioUrl(data.audio_path.startsWith('/') ? data.audio_path : `/${data.audio_path}`);
@@ -251,13 +254,12 @@ function App() {
       const isErrorMetric = title === "Hallucination";
       const scoreNum = (metric && metric.score !== undefined) ? metric.score : 0;
       const isGood = isErrorMetric ? scoreNum <= 0.3 : scoreNum >= 0.7;
-      const displayScore = isErrorMetric ? (1 - scoreNum) : scoreNum;
 
       return (
         <div className="metric-card">
           <div className="metric-title">{title}</div>
           <div className={`metric-score ${isGood ? 'good' : 'bad'}`}>
-            {(displayScore * 100).toFixed(0)}%
+            {(scoreNum * 100).toFixed(0)}%
           </div>
           {(metric && metric.reasoning) && (
             <div className="metric-reasoning">
@@ -326,7 +328,7 @@ function App() {
               <div className="result-header">
                 <h3>Briefing Results</h3>
                 <div className={`safety-badge ${safetyPassed === false ? 'failed' : ''}`}>
-                  {safetyPassed === false ? '⚠ Safety Failed' : '✓ Critic Verified'}
+                  {safetyPassed === false ? `⚠ Safety Blocked (${criticScore !== null ? criticScore : 0}%)` : `🛡️ Safety Validated (${criticScore !== null ? criticScore : 100}%)`}
                 </div>
               </div>
               

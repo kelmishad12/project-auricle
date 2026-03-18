@@ -161,17 +161,20 @@ def reflexion_loop(state: AgentState, config: RunnableConfig):
 
     safety_passed = analysis.get("safety_passed", False)
     reasoning = analysis.get("reasoning", "")
+    critic_score = analysis.get("critic_score", 0)
 
     if not safety_passed:
         print(f"[Reflexion] Safety Warning: {reasoning}")
         return {
             "safety_check_passed": False,
-            "critic_feedback": reasoning
+            "critic_feedback": reasoning,
+            "critic_score": critic_score
         }
 
     return {
         "safety_check_passed": True,
-        "critic_feedback": ""
+        "critic_feedback": "",
+        "critic_score": critic_score
     }
 
 # pylint: disable=unused-argument

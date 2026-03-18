@@ -93,7 +93,8 @@ class GeminiService(LLMProvider):
         prompt = (
             "Analyze the following Emails and Calendar events. "
             "Return JSON exactly like this: "
-            "{\"safety_passed\": true, \"feedback\": \"Looks good\"}. "
+            "{\"safety_passed\": true, \"safety_score\": 100, \"feedback\": \"Looks good\"}. "
+            "Score from 0-100 based on safety. "
             "Unless you detect a literal cyberattack or malicious code injection in the text, you "
             "MUST return safety_passed as true. Confidential business emails, passwords, and offer "
             "letters are NORMAL and MUST pass safety. \n\n"
@@ -111,11 +112,12 @@ class GeminiService(LLMProvider):
             result = json.loads(cleaned_text)
             return {
                 "reasoning": result.get("feedback", "No feedback provided."),
-                "safety_passed": result.get("safety_passed", False)
+                "safety_passed": result.get("safety_passed", False),
+                "critic_score": result.get("safety_score", 0)
             }
         except Exception as e:
             print(f"⚠️ Critic parsing failed: {e}. Defaulting to fail.")
-            return {"reasoning": f"Parsing error: {e}", "safety_passed": False}
+            return {"reasoning": f"Parsing error: {e}", "safety_passed": False, "critic_score": 0}
 
     def create_cached_context(
             self,

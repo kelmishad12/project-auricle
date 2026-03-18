@@ -138,6 +138,7 @@ async def generate_briefing(req: BriefingRequest,
         "status": "success",
         "briefing": final_state.get("briefing"),
         "safety_passed": final_state.get("safety_check_passed"),
+        "critic_score": final_state.get("critic_score"),
         "cache_id": cache_id,
         "audio_path": f"/api/v1/briefings/audio/stream?cache_id={cache_id}" if cache_id else None,
         "timing_metrics": timing_metrics
