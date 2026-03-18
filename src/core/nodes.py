@@ -2,6 +2,7 @@
 LangGraph node implementations.
 """
 import os
+import concurrent.futures
 from langchain_core.runnables import RunnableConfig
 from sqlalchemy.orm import Session
 
@@ -81,14 +82,9 @@ def synthesize_briefing(state: AgentState, config: RunnableConfig):
     """Synthesize the final briefing contextually using Memory Tiering."""
     gemini = GeminiService()
 
-    revision_count = state.get('revision_count', 0)
-    critic_feedback = state.get('critic_feedback', '')
-
     # Extract DB settings before disk I/O so we can shortcut
     user_email = os.environ.get("USER_EMAIL", "SHAWN_KELMI_VP_ENG")
     db: Session = SessionLocal()
-
-    fallback_profile, fallback_data, fallback_sys = "", "", ""
 
     try:
         settings = db.query(UserSettings).filter(
@@ -99,64 +95,56 @@ def synthesize_briefing(state: AgentState, config: RunnableConfig):
             db.commit()
             db.refresh(settings)
 
-        cache_id = settings.cache_id
+        user_profile_text, user_profile_version = build_profile_text()
 
-        if cache_id and not gemini.validate_cache(cache_id):
-            print(f"DEBUG nodes.py: Cache {cache_id} is invalid/expired. Creating a new one.")
-            cache_id = None
+        emails = chr(10).join(state.get('email_summaries', []))
+        calendar = chr(10).join(state.get('calendar_events', []))
+        dynamic_data = f"Emails:\n{emails}\n\nCalendar:\n{calendar}"
 
-        user_profile_version = "UNKNOWN"
+        system_instruction = (
+            "You are an AI Executive Assistant. Create a concise, professional "
+            "daily briefing using the following data. Keep it under 5 minutes "
+            "when spoken. Do not include conversational greetings like 'Good morning'. "
+            "Jump straight into summarizing the data."
+        )
 
-        # If we have no cache_id, we MUST create one and save it permanently.
-        # Disk I/O and heavy string concatenation is ONLY done when cache is missed.
-        if not cache_id:
-            user_profile_text, user_profile_version = build_profile_text()
+        prompt = "Please draft today's briefing."
+        fallback_prompt = (
+            f"SYSTEM INSTRUCTION: {system_instruction}\n"
+            "CRITICAL constraints:\n"
+            "- Do NOT output or summarize the AI architectural padding.\n"
+            "- Do NOT output my user profile, role, title, or OKRs.\n"
+            "- ONLY summarize the Emails and Calendar data below.\n\n"
+            f"<BACKGROUND_PROFILE>\n{user_profile_text}\n</BACKGROUND_PROFILE>\n\n"
+            f"<DATA_TO_SUMMARIZE>\n{dynamic_data}\n</DATA_TO_SUMMARIZE>\n\n"
+            f"USER REQUEST: {prompt}"
+        )
 
-            emails = chr(10).join(state.get('email_summaries', []))
-            calendar = chr(10).join(state.get('calendar_events', []))
-            dynamic_data = f"Emails:\n{emails}\n\nCalendar:\n{calendar}"
-
-            system_instruction = (
-                "You are an AI Executive Assistant. Create a concise, professional "
-                "daily briefing using the following data. Keep it under 5 minutes "
-                "when spoken."
-            )
-
-            new_cache_id = gemini.create_cached_context(
+        def ensure_cache():
+            cid = settings.cache_id
+            if cid and gemini.validate_cache(cid):
+                return cid
+            print("DEBUG nodes.py: Cache is invalid/missing. Creating a new one.")
+            new_cid = gemini.create_cached_context(
                 system_instruction=system_instruction,
                 user_profile_text=user_profile_text,
                 dynamic_data=dynamic_data
             )
+            return new_cid
 
-            if new_cache_id:
-                print(f"DEBUG nodes.py: Created new_cache_id={new_cache_id}")
-                settings.cache_id = new_cache_id
-                db.commit()
-                cache_id = new_cache_id
-            else:
-                print("DEBUG nodes.py: create_cached_context returned None")
-                cache_id = None
-                fallback_profile = user_profile_text
-                fallback_data = dynamic_data
-                fallback_sys = system_instruction
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            future_cache = executor.submit(ensure_cache)
+            future_briefing = executor.submit(gemini.generate_content, fallback_prompt)
+
+            final_cache_id = future_cache.result()
+            briefing = future_briefing.result()
+
+        if final_cache_id and final_cache_id != settings.cache_id:
+            settings.cache_id = final_cache_id
+            db.commit()
+
     finally:
         db.close()
-
-    prompt = "Please draft today's briefing."
-    if revision_count > 0 and critic_feedback:
-        prompt += (
-            f"\n\nCRITIC FEEDBACK FROM PREVIOUS DRAFT:\n{critic_feedback}\n\n"
-            "Please revise your briefing to explicitly address and fix the issues mentioned above."
-        )
-
-    if cache_id:
-        briefing = gemini.chat_with_context(cache_id, prompt)
-    else:
-        fallback_prompt = (
-            f"{fallback_sys}\n\n{fallback_profile}\n\n"
-            f"{fallback_data}\n\n{prompt}"
-        )
-        briefing = gemini.generate_content(fallback_prompt)
 
     return {
         "briefing": briefing,
@@ -169,19 +157,15 @@ def synthesize_briefing(state: AgentState, config: RunnableConfig):
 def reflexion_loop(state: AgentState, config: RunnableConfig):
     """Enforce strict Safety/Privacy protocols via a Reflexion loop."""
     gemini = GeminiService()
-
-    revision_count = state.get('revision_count', 0)
     analysis = gemini.analyze_context(state)
 
     safety_passed = analysis.get("safety_passed", False)
     reasoning = analysis.get("reasoning", "")
 
     if not safety_passed:
-        print(
-            f"[Reflexion] Safety Warning [{revision_count + 1}/3]: {reasoning}")
+        print(f"[Reflexion] Safety Warning: {reasoning}")
         return {
             "safety_check_passed": False,
-            "revision_count": revision_count + 1,
             "critic_feedback": reasoning
         }
 

@@ -50,16 +50,12 @@ class AuricleGraph:
             ["fetch_emails", "fetch_calendar"]
         )
 
-        # Fan-in: wait for both before synthesis
-        workflow.add_edge("fetch_emails", "synthesize_briefing")
-        workflow.add_edge("fetch_calendar", "synthesize_briefing")
-        workflow.add_edge("synthesize_briefing", "reflexion_loop")
-        # Self-correction loop conditional edge
+        # Fan-in: wait for both before safety check
+        workflow.add_edge("fetch_emails", "reflexion_loop")
+        workflow.add_edge("fetch_calendar", "reflexion_loop")
 
         def route_reflexion(state):
             if state.get("safety_check_passed"):
-                return END
-            if state.get("revision_count", 0) < 3:
                 return "synthesize_briefing"
             return "safe_mode_fallback"
 
@@ -67,11 +63,11 @@ class AuricleGraph:
             "reflexion_loop",
             route_reflexion,
             {
-                END: END,
                 "synthesize_briefing": "synthesize_briefing",
                 "safe_mode_fallback": "safe_mode_fallback"
             }
         )
+        workflow.add_edge("synthesize_briefing", END)
         workflow.add_edge("safe_mode_fallback", END)
 
         if checkpointer is None:

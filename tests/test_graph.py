@@ -88,43 +88,4 @@ async def test_reflexion_loop_safe_mode_fallback(mock_gemini_class):
     result = await graph.ainvoke(initial_state)
 
     assert result["safety_check_passed"] is False
-    assert result["revision_count"] == 3
     assert "Good morning. I encountered multiple safety" in result["briefing"]
-
-
-@pytest.mark.asyncio
-@patch("src.core.nodes.GeminiService")
-async def test_reflexion_loop_recovers(mock_gemini_class):
-    """Verify that failing safety checks once and then passing works."""
-    mock_gemini = MagicMock()
-    mock_gemini.generate_content.return_value = "Mocked briefing"
-    mock_gemini.chat_with_context.return_value = "Mocked briefing"
-    mock_gemini.create_cached_context.return_value = "mock-cache-id"
-    mock_gemini.analyze_context.side_effect = [
-        {"safety_passed": False, "reasoning": "Tone is too casual"},
-        {"safety_passed": True, "reasoning": "Looks good"}
-    ]
-    mock_gemini_class.return_value = mock_gemini
-
-    mail = MockMailAdapter()
-    cal = MockCalendarAdapter()
-    graph = AuricleGraph(mail_provider=mail, cal_provider=cal)
-
-    initial_state = {
-        "messages": [],
-        "email_summaries": [],
-        "calendar_events": [],
-        "briefing": "",
-        "spoken_briefing": "",
-        "safety_check_passed": False,
-        "revision_count": 0,
-        "critic_feedback": ""
-    }
-
-    result = await graph.ainvoke(initial_state)
-
-    assert result["safety_check_passed"] is True
-    assert result["revision_count"] == 1
-    # Check that either chat_with_context or generate_content was called twice
-    total_calls = mock_gemini.generate_content.call_count + mock_gemini.chat_with_context.call_count
-    assert total_calls == 2

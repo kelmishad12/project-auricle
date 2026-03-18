@@ -18,6 +18,7 @@ function App() {
 
   const [evalMetrics, setEvalMetrics] = useState(null);
   const [evalStatus, setEvalStatus] = useState("idle");
+  const [safetyPassed, setSafetyPassed] = useState(null);
 
   const handleChatSubmit = async () => {
     if (!chatInput.trim() || !cacheId) return;
@@ -123,6 +124,7 @@ function App() {
     setAudioUrl(null);
     setEvalMetrics(null);
     setEvalStatus("pending");
+    setSafetyPassed(null);
 
     try {
       const response = await fetch("/api/v1/briefings/generate", {
@@ -144,6 +146,7 @@ function App() {
       setResult(data.briefing);
       setTimingMetrics(data.timing_metrics || {});
       setCacheId(data.cache_id || "mock-cache-id");
+      setSafetyPassed(data.safety_passed);
       
       if (data.audio_path) {
         setAudioUrl(data.audio_path.startsWith('/') ? data.audio_path : `/${data.audio_path}`);
@@ -245,13 +248,16 @@ function App() {
     const { faithfulness, answer_relevance, hallucination } = evalMetrics;
     
     const MetricCard = ({ title, metric }) => {
-      const scoreNum = (metric && metric.score) ? metric.score : 0;
-      const isGood = scoreNum >= 0.7;
+      const isErrorMetric = title === "Hallucination";
+      const scoreNum = (metric && metric.score !== undefined) ? metric.score : 0;
+      const isGood = isErrorMetric ? scoreNum <= 0.3 : scoreNum >= 0.7;
+      const displayScore = isErrorMetric ? (1 - scoreNum) : scoreNum;
+
       return (
         <div className="metric-card">
           <div className="metric-title">{title}</div>
           <div className={`metric-score ${isGood ? 'good' : 'bad'}`}>
-            {(scoreNum * 100).toFixed(0)}%
+            {(displayScore * 100).toFixed(0)}%
           </div>
           {(metric && metric.reasoning) && (
             <div className="metric-reasoning">
@@ -319,7 +325,9 @@ function App() {
             <div className="result-panel glass-panel fade-in">
               <div className="result-header">
                 <h3>Briefing Results</h3>
-                <div className="safety-badge">✓ Critic Verified</div>
+                <div className={`safety-badge ${safetyPassed === false ? 'failed' : ''}`}>
+                  {safetyPassed === false ? '⚠ Safety Failed' : '✓ Critic Verified'}
+                </div>
               </div>
               
               {audioUrl && (
