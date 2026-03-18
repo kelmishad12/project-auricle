@@ -8,30 +8,15 @@ Project Auricle serves as a comprehensive architectural blueprint and implementa
 
 ## Architecture Structure
 
-```
+```text
 /
-├── server.py        # FastAPI Entrypoint for Cloud Run
-├── /docs            # Markdown contribution docs
-├── /scripts
-│    └── system_profile_sample.txt # The static System Profile giving Persona instructions
-├── /frontend
-│    ├── src/App.jsx # React UI
+├── server.py        # FastAPI cloud endpoint & Streaming handler
+├── /frontend        # React UI & Data Visualization dashboard
 ├── /src
-│    ├── /core       # Pure LangGraph logic (No API calls here)
-│    │    ├── state.py   # AgentState definition
-│    │    ├── graph.py   # Supervisor and Node definitions
-│    │    ├── nodes.py   # LangGraph Node definitions
-│    │    └── tools.py   # Extracted tools for LLM use
-│    ├── /services   # Concrete Services and Google integrations
-│    │    ├── google.py      # Google Services (OAuth, Gmail & Calendar SDKs)
-│    │    ├── gemini.py      # Gemini 2.5 Flash Integration
-│    │    └── elevenlabs.py  # ElevenLabs Text-to-Speech
-│    ├── /adapters   # Config & Mock Injection
-│    │    ├── localmock.py          # Uses mock (Private/GitIgnored)
-│    │    └── config.py             # Dependency Injection wiring
-│    ├── /db         # Database and ORM definitions (PostgreSQL)
-│    │    ├── session.py
-│    │    └── /models    # SQLAlchemy Models
+│    ├── /core       # LangGraph Orchestration (Nodes & State)
+│    ├── /services   # AI & External APIs (Gemini, ElevenLabs, Google Workspace)
+│    ├── /adapters   # Mock Injection & Config wiring
+│    └── /db         # PostgreSQL Models & Connection pooling
 ```
 
 ## Local Development & Testing
