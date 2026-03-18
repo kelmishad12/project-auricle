@@ -146,7 +146,7 @@ function App() {
       setCacheId(data.cache_id || "mock-cache-id");
       
       if (data.audio_path) {
-        setAudioUrl(`/${data.audio_path}`);
+        setAudioUrl(data.audio_path.startsWith('/') ? data.audio_path : `/${data.audio_path}`);
       }
 
     } catch (err) {
