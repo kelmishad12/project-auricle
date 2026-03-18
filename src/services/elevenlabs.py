@@ -2,7 +2,7 @@
 ElevenLabs text-to-speech integration.
 """
 # pylint: disable=import-error,no-name-in-module
-from typing import Protocol
+from typing import Protocol, Iterator
 import os
 from elevenlabs.client import ElevenLabs
 
@@ -10,7 +10,7 @@ from elevenlabs.client import ElevenLabs
 class AudioSynthesisProvider(Protocol):
     """Abstract protocol for text-to-speech generation."""
 
-    def generate_audio_stream(self, text: str) -> bytes:
+    def generate_audio_stream(self, text: str) -> Iterator[bytes]:
         """Generate audio stream bytes."""
 
 
@@ -30,17 +30,16 @@ class ElevenLabsService(AudioSynthesisProvider):
             api_key=self.api_key) if self.api_key else None
         self.model_id = "eleven_flash_v2_5"
 
-    def generate_audio_stream(self, text: str) -> bytes:
+    def generate_audio_stream(self, text: str) -> Iterator[bytes]:
         """Generate audio stream bytes using ElevenLabs API."""
         if not self.client:
-            return b"Audio binary payload here... (Mocked - No API Key)"
+            yield b"Audio binary payload here... (Mocked - No API Key)"
+            return
 
         # Using a standard free-tier voice ID to prevent 402 API Payment
         # Required errors
-        generator = self.client.text_to_speech.convert(
+        yield from self.client.text_to_speech.convert(
             text=text,
             voice_id="hpp4J3VqNfWAUOO0d1Us",  # Default free tier voice
             model_id=self.model_id,
         )
-        audio_bytes = b"".join(generator)
-        return audio_bytes

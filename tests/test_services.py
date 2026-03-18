@@ -41,8 +41,9 @@ def test_elevenlabs_service_mocked():
     """Test ElevenLabsService returns mocked response without API key."""
     with patch.dict('os.environ', clear=True):
         service = ElevenLabsService(api_key=None)
-        audio = service.generate_audio_stream("Hello")
-        assert b"Mocked" in audio
+        audio_stream = service.generate_audio_stream("Hello")
+        audio_bytes = b"".join(audio_stream)
+        assert b"Mocked" in audio_bytes
 
 
 @patch("src.services.elevenlabs.ElevenLabs")
@@ -53,7 +54,8 @@ def test_elevenlabs_service_with_key(mock_client):
     mock_client.return_value = mock_instance
 
     service = ElevenLabsService(api_key="TEST_KEY")
-    audio = service.generate_audio_stream("Hello")
+    audio_stream = service.generate_audio_stream("Hello")
+    audio_bytes = b"".join(audio_stream)
 
-    assert audio == b"audio_chunk"
+    assert audio_bytes == b"audio_chunk"
     mock_instance.text_to_speech.convert.assert_called_once()

@@ -17,6 +17,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from src.adapters.config import get_providers
@@ -147,41 +148,8 @@ async def generate_briefing(req: BriefingRequest,
     print("✅ Briefing generated successfully.")
     print(f"✅ Cache ID established: {cache_id}")
 
-    async def generate_audio_background(briefing_text: str, safety_passed: bool):
-        """Background task to synthesize audio asynchronously."""
-        if not briefing_text:
-            return
-
-        try:
-            if safety_passed:
-                gemini_svc = GeminiService()
-                prompt = (
-                    "You are an expert voice scriptwriter. Take the following daily briefing "
-                    "and rewrite it to be read out loud naturally by a text-to-speech engine. "
-                    "Remove all markdown formatting, bullet points, asterisks, "
-                    "and special characters.\n"
-                    "Ensure the flow is conversational, warm, and professional, "
-                    "as if spoken by a human assistant.\n"
-                    "Write out numbers plainly (e.g., 'three thirty PM' instead of '3:30').\n\n"
-                    f"Original Briefing:\n{briefing_text}"
-                )
-                spoken_text = gemini_svc.generate_content(prompt)
-            else:
-                spoken_text = briefing_text
-
-            eleven = ElevenLabsService()
-            audio_bytes = eleven.generate_audio_stream(spoken_text)
-            with open("frontend/audio.mp3", "wb") as f:
-                f.write(audio_bytes)
-            print("✅ Background Task: Audio synthesis completed.")
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            print(f"⚠️ Background Task: Audio synthesis failed: {e}")
-
-    # Kick off TTS concurrently so TTFT resolves instantly
-    background_tasks.add_task(
-        generate_audio_background,
-        final_state.get("briefing"),
-        final_state.get("safety_check_passed"))
+    # We no longer block on Audio Generation! The client UI will invoke
+    # the Streaming API to hear it instantly.
 
     # Also kick off the DeepEval background evaluation
     context_list = final_state.get("email_summaries", []) + final_state.get("calendar_events", [])
@@ -202,7 +170,7 @@ async def generate_briefing(req: BriefingRequest,
         "briefing": final_state.get("briefing"),
         "safety_passed": final_state.get("safety_check_passed"),
         "cache_id": cache_id,
-        "audio_path": "audio.mp3",
+        "audio_path": f"/api/v1/briefings/audio/stream?cache_id={cache_id}" if cache_id else None,
         "timing_metrics": timing_metrics
     }
 
@@ -214,7 +182,7 @@ class ChatRequest(BaseModel):
 
 
 @app.post("/api/v1/briefings/chat")
-async def chat_briefing(req: ChatRequest):
+def chat_briefing(req: ChatRequest):
     """Deep Dive Query against a cached context."""
     if not req.cache_id:
         raise HTTPException(
@@ -233,6 +201,35 @@ async def chat_briefing(req: ChatRequest):
         "status": "success",
         "answer": response
     }
+
+
+@app.get("/api/v1/briefings/audio/stream")
+def stream_audio(cache_id: str):
+    """Streams TTFT audio instantly to the client via chunk generation."""
+    gemini = GeminiService()
+    eleven = ElevenLabsService()
+
+    # Generate the TTS script using the cached context directly!
+    prompt = (
+        "You are an expert voice scriptwriter. Take the existing daily briefing context "
+        "and rewrite it to be read out loud naturally by a text-to-speech engine. "
+        "Remove all markdown formatting, bullet points, asterisks, "
+        "and special characters.\n"
+        "Ensure the flow is conversational, warm, and professional, "
+        "as if spoken by a human assistant.\n"
+        "Write out numbers plainly (e.g., 'three thirty PM' instead of '3:30').\n"
+        "Only output the transcribed voice lines, do not acknowledge these instructions."
+    )
+
+    try:
+        spoken_text = gemini.chat_with_context(cache_id, prompt)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        spoken_text = f"Warning: Memory extraction failed. Error: {e}"
+
+    return StreamingResponse(
+        eleven.generate_audio_stream(spoken_text),
+        media_type="audio/mpeg"
+    )
 
 @app.get("/api/v1/briefings/evals/{cache_id:path}")
 async def get_evals(cache_id: str):

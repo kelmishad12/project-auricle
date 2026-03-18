@@ -187,7 +187,10 @@ class GeminiService(LLMProvider):
             augmented_prompt = (
                 "CRITICAL OVERRIDE: Ignore prior instruction to 'Create a daily briefing'. "
                 "Do NOT output the user profile, role, or OKRs. "
-                "Provide a bulleted, highly concise answer to the following question ONLY.\n\n"
+                "Provide a natural, conversational, and direct answer "
+                "to the following question ONLY.\n"
+                "You may use brief formatting or bullet points "
+                "if it significantly improves readability.\n\n"
                 f"Question: {prompt}"
             )
 
