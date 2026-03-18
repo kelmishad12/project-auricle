@@ -20,6 +20,7 @@ function App() {
   const [evalStatus, setEvalStatus] = useState("idle");
   const [safetyPassed, setSafetyPassed] = useState(null);
   const [criticScore, setCriticScore] = useState(null);
+  const [audioFallback, setAudioFallback] = useState(false);
 
   const handleChatSubmit = async () => {
     if (!chatInput.trim() || !cacheId) return;
@@ -127,6 +128,12 @@ function App() {
     setEvalStatus("pending");
     setSafetyPassed(null);
     setCriticScore(null);
+    setAudioFallback(false);
+    
+    // Stop any currently playing browser TTS before starting fresh
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
 
     try {
       const response = await fetch("/api/v1/briefings/generate", {
@@ -220,6 +227,17 @@ function App() {
         )}
       </div>
     );
+  };
+
+  const handleAudioError = () => {
+    console.warn("ElevenLabs audio stream failed. Quota Exceeded. Falling back to native browser TTS.");
+    setAudioFallback(true);
+    if ('speechSynthesis' in window && result) {
+      // Strip markdown asterisks and hash symbols so they aren't spoken out loud
+      const plainText = result.replace(/[#*`_\[\]]/g, '');
+      const utterance = new SpeechSynthesisUtterance(plainText);
+      window.speechSynthesis.speak(utterance);
+    }
   };
 
   const EvalDiagnosticsPanel = () => {
@@ -332,10 +350,17 @@ function App() {
                 </div>
               </div>
               
-              {audioUrl && (
+              {audioUrl && !audioFallback && (
                 <div className="audio-player">
                   <h4>Audio Synthesis</h4>
-                  <audio controls src={audioUrl} />
+                  <audio controls src={audioUrl} onError={handleAudioError} autoPlay />
+                </div>
+              )}
+
+              {audioFallback && (
+                <div className="audio-player fallback">
+                  <h4>Audio Synthesis <span className="warning-pill" style={{backgroundColor: '#ff9800', padding: '2px 8px', borderRadius: '12px', fontSize: '12px', marginLeft: '10px', color: '#fff'}}>Native TTS Fallback</span></h4>
+                  <p style={{fontSize: '13px', color: '#666'}}>ElevenLabs API Quota Exceeded. Streaming via your browser's native accessibility speaker.</p>
                 </div>
               )}
               
