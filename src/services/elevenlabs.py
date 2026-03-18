@@ -36,10 +36,12 @@ class ElevenLabsService(AudioSynthesisProvider):
             yield b"Audio binary payload here... (Mocked - No API Key)"
             return
 
-        # Using a standard free-tier voice ID to prevent 402 API Payment
-        # Required errors
-        yield from self.client.text_to_speech.convert(
-            text=text,
-            voice_id="hpp4J3VqNfWAUOO0d1Us",  # Default free tier voice
-            model_id=self.model_id,
-        )
+        try:
+            yield from self.client.text_to_speech.convert(
+                text=text,
+                voice_id="hpp4J3VqNfWAUOO0d1Us",  # Default free tier voice
+                model_id=self.model_id,
+            )
+        except Exception as e:
+            print(f"ElevenLabs Streaming Error: {e}")
+            yield b"Audio stream failed (Quota Exceeded or Invalid Key)"
