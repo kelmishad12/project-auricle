@@ -13,6 +13,7 @@ Project Auricle serves as a comprehensive architectural blueprint and implementa
 ├── server.py        # FastAPI cloud endpoint & Streaming handler
 ├── /frontend        # React UI & Data Visualization dashboard
 ├── /src
+│    ├── /api        # Server API Routers & Endpoint handlers
 │    ├── /core       # LangGraph Orchestration (Nodes & State)
 │    ├── /services   # AI & External APIs (Gemini, ElevenLabs, Google Workspace)
 │    ├── /adapters   # Mock Injection & Config wiring
