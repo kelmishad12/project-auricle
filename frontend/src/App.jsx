@@ -17,7 +17,7 @@ function App() {
   const [chatError, setChatError] = useState(null);
 
   const [evalMetrics, setEvalMetrics] = useState(null);
-  const [evalStatus, setEvalStatus] = useState("idle"); // idle, pending, running, completed, failed
+  const [evalStatus, setEvalStatus] = useState("idle");
 
   const handleChatSubmit = async () => {
     if (!chatInput.trim() || !cacheId) return;
@@ -164,8 +164,8 @@ function App() {
     const totalSec = Total ? (Total / 1000).toFixed(2) : "0.00";
     
     return (
-      <div className="pipeline-container">
-        <h3>Server TTFT Latency Metrics {result && `(Total: ${totalSec}s)`}</h3>
+      <div className="diagnostic-card fade-in">
+        <h4 className="diag-title">Pipeline Latency {result && <span className="metrics-total">({totalSec}s)</span>}</h4>
         {isGenerating ? (
           <div className="nodes">
             {executionNodes.map((node, idx) => (
@@ -181,7 +181,7 @@ function App() {
                 </div>
                 <div className="node-details">
                   <span className="node-label">{node}</span>
-                  {idx === activeNodeIndex && <span className="node-status" style={{float: "right", color: "#666", marginLeft: "10px"}}>Processing...</span>}
+                  {idx === activeNodeIndex && <span className="node-status">Processing</span>}
                 </div>
               </div>
             ))}
@@ -193,20 +193,20 @@ function App() {
                 <div className="node-icon">✓</div>
                 <div className="node-details">
                   <span className="node-label">[{nodeName}]</span>
-                  <span className="node-time" style={{float: "right", color: "#666", marginLeft: "10px"}}>
-                     Latency: {(timeMs / 1000).toFixed(2)}s
+                  <span className="node-time">
+                     {(timeMs / 1000).toFixed(2)}s
                   </span>
                 </div>
               </div>
             ))}
-            <div className="node-item complete" style={{ borderLeftColor: "#8b5cf6" }}>
-              <div className="node-icon" style={{ backgroundColor: "#8b5cf6", borderColor: "#8b5cf6", color: "white" }}>⚡</div>
+            <div className="node-item complete sync-node">
+              <div className="node-icon">⚡</div>
               <div className="node-details">
-                <span className="node-label" style={{ color: "#8b5cf6", fontWeight: "600" }}>
-                  [finalizing_audio] <small style={{ fontWeight: "normal", opacity: 0.8 }}>(Not part of LangGraph)</small>
+                <span className="node-label">
+                  [finalizing_audio] <br/><small className="non-graph-text">(Not part of LangGraph)</small>
                 </span>
-                <span className="node-time" style={{float: "right", color: "#8b5cf6", marginLeft: "10px", fontWeight: "500"}}>
-                   Latency: Async
+                <span className="node-time">
+                   Async
                 </span>
               </div>
             </div>
@@ -221,12 +221,12 @@ function App() {
 
     if (evalStatus === "pending" || evalStatus === "running") {
       return (
-        <div className="eval-panel glass-panel fade-in">
+        <div className="diagnostic-card fade-in">
           <div className="eval-header">
-            <h3>DeepEval Diagnostics</h3>
+            <h4 className="diag-title">DeepEval Metrics</h4>
             <div className="eval-spinner-container">
               <span className="eval-spinner"></span>
-              <span style={{color: "#666", fontSize: "0.9rem"}}>Evaluating pipeline outputs...</span>
+              <span className="eval-status-text">Evaluating...</span>
             </div>
           </div>
         </div>
@@ -235,9 +235,9 @@ function App() {
 
     if (evalStatus === "failed" || !evalMetrics) {
       return (
-        <div className="eval-panel glass-panel fade-in">
-          <h3>DeepEval Diagnostics</h3>
-          <p style={{color: "#ea4335"}}>Evaluation failed or timed out.</p>
+        <div className="diagnostic-card fade-in">
+          <h4 className="diag-title">DeepEval Metrics</h4>
+          <p className="eval-error-text">Evaluation failed or timed out.</p>
         </div>
       );
     }
@@ -250,12 +250,12 @@ function App() {
       return (
         <div className="metric-card">
           <div className="metric-title">{title}</div>
-          <div className="metric-score" style={{color: isGood ? "#34a853" : "#ea4335"}}>
+          <div className={`metric-score ${isGood ? 'good' : 'bad'}`}>
             {(scoreNum * 100).toFixed(0)}%
           </div>
           {(metric && metric.reasoning) && (
-            <div className="metric-reasoning" title={metric.reasoning}>
-              {metric.reasoning.length > 80 ? metric.reasoning.substring(0, 80) + '...' : metric.reasoning}
+            <div className="metric-reasoning">
+              {metric.reasoning}
             </div>
           )}
         </div>
@@ -263,17 +263,17 @@ function App() {
     };
 
     return (
-      <div className="eval-panel glass-panel fade-in">
+      <div className="diagnostic-card fade-in">
         <div className="eval-header">
-          <h3>DeepEval Diagnostics</h3>
-          <span className="eval-badge">Quantitative Unit Tests</span>
+          <h4 className="diag-title">DeepEval Metrics</h4>
+          <span className="eval-badge">Quant Unit Tests</span>
         </div>
-        <p style={{fontSize: "0.85rem", color: "#666", marginBottom: "15px"}}>
-          Metrics mapped against Context Cache (ID: <code>{cacheId}</code>) evaluating source adherence and logic safety.
+        <p className="eval-desc">
+          Matched against Context Cache <code>{cacheId}</code>
         </p>
         <div className="eval-metrics-grid">
            <MetricCard title="Faithfulness" metric={faithfulness} />
-           <MetricCard title="Answer Relevance" metric={answer_relevance} />
+           <MetricCard title="Relevance" metric={answer_relevance} />
            <MetricCard title="Hallucination" metric={hallucination} />
         </div>
       </div>
@@ -282,110 +282,125 @@ function App() {
 
   return (
     <div className="app-container">
+      <div className="background-effect"></div>
       <header className="navbar">
-        <div className="brand">Project Auricle</div>
-        <div className="brand-subtitle">Contextual Briefing Agent</div>
+        <h1 className="brand">Project Auricle</h1>
+        <p className="brand-subtitle">Contextual Briefing Agent</p>
       </header>
 
-      <main className="content">
-        <div className="control-panel glass-panel">
-          <h2>Generate Daily Briefing</h2>
-          <p>This will orchestrate the LangGraph supervisor to fetch recent context and generate a safe, auditory brief.</p>
-          
-          <div className="input-group">
-            <label>Target Persona Profile</label>
-            <select 
-              value={profilePath} 
-              onChange={(e) => setProfilePath(e.target.value)}
+      <div className="layout-wrapper">
+        <main className="main-content">
+          <div className="control-panel glass-panel">
+            <h2>Generate Daily Briefing</h2>
+            <p className="panel-desc">This will orchestrate the LangGraph supervisor to fetch recent context and generate a safe, auditory brief.</p>
+            
+            <div className="input-group">
+              <label>Target Persona Profile</label>
+              <select 
+                value={profilePath} 
+                onChange={(e) => setProfilePath(e.target.value)}
+                disabled={isGenerating}
+              >
+                <option value="scripts/system_profile_sample.txt">VP of Engineering (Sample)</option>
+                <option value="scripts/test_user.txt">Test Persona</option>
+              </select>
+            </div>
+
+            <button 
+              className={`btn-primary ${isGenerating ? 'generating' : ''}`}
+              onClick={handleGenerate}
               disabled={isGenerating}
             >
-              <option value="scripts/system_profile_sample.txt">VP of Engineering (Sample)</option>
-              <option value="scripts/test_user.txt">Test Persona</option>
-            </select>
+              {isGenerating ? "Executing LangGraph..." : "Trigger Briefing"}
+            </button>
           </div>
 
-          <button 
-            className={`btn-primary ${isGenerating ? 'generating' : ''}`}
-            onClick={handleGenerate}
-            disabled={isGenerating}
-          >
-            {isGenerating ? "Executing LangGraph..." : "Trigger Briefing"}
-          </button>
-        </div>
-
-        {PipelineProgress()}
-
-        {error && (
-          <div className="error-panel glass-panel">
-            <h3>Diagnostic Error</h3>
-            <p>{error}</p>
-          </div>
-        )}
-
-        {result && (
-          <div className="result-panel glass-panel fade-in">
-            <div className="result-header">
-              <h3>Briefing Results</h3>
-              <div className="safety-badge">✓ Critic Verified (Score: 4.8)</div>
-            </div>
-            
-            {audioUrl && (
-              <div className="audio-player">
-                <h4>Audio Synthesis</h4>
-                <audio controls src={audioUrl} />
+          {result && (
+            <div className="result-panel glass-panel fade-in">
+              <div className="result-header">
+                <h3>Briefing Results</h3>
+                <div className="safety-badge">✓ Critic Verified</div>
               </div>
-            )}
-            
-            {EvalDiagnosticsPanel()}
-            
-            <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(result) }} />
-          </div>
-        )}
-
-        {cacheId && (
-          <div className="chat-panel glass-panel fade-in">
-            <h3>Deep Dive Chat</h3>
-            <p className="cached-notice">Connected to Context Cache: <code>{cacheId}</code></p>
-            
-            <div className="chat-history">
-              {chatHistory.map((msg, idx) => (
-                <div key={idx} className={`chat-message ${msg.role}`}>
-                  <div 
-                    className="msg-content markdown-body" 
-                    dangerouslySetInnerHTML={{ __html: msg.role === 'assistant' ? marked.parse(msg.content) : msg.content }} 
-                  />
-                </div>
-              ))}
-              {isChatting && (
-                <div className="chat-message assistant">
-                  <div className="msg-content typing-indicator">
-                    <span>.</span><span>.</span><span>.</span>
-                  </div>
+              
+              {audioUrl && (
+                <div className="audio-player">
+                  <h4>Audio Synthesis</h4>
+                  <audio controls src={audioUrl} />
                 </div>
               )}
+              
+              <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(result) }} />
             </div>
+          )}
 
-            <div className="chat-input-wrapper">
-              <input 
-                type="text" 
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
-                placeholder="Ask a follow-up about the briefing..."
-                disabled={isChatting}
-              />
-              <button 
-                className="btn-chat" 
-                onClick={handleChatSubmit}
-                disabled={isChatting || !chatInput.trim()}
-              >
-                Send
-              </button>
+          {cacheId && (
+            <div className="chat-panel glass-panel fade-in">
+              <h3>Deep Dive Chat</h3>
+              <p className="cached-notice">Connected to Context Cache: <code>{cacheId}</code></p>
+              
+              <div className="chat-history">
+                {chatHistory.map((msg, idx) => (
+                  <div key={idx} className={`chat-message ${msg.role}`}>
+                    <div 
+                      className="msg-content markdown-body" 
+                      dangerouslySetInnerHTML={{ __html: msg.role === 'assistant' ? marked.parse(msg.content) : msg.content }} 
+                    />
+                  </div>
+                ))}
+                {isChatting && (
+                  <div className="chat-message assistant">
+                    <div className="msg-content typing-indicator">
+                      <span>.</span><span>.</span><span>.</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="chat-input-wrapper">
+                <input 
+                  type="text" 
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
+                  placeholder="Ask a follow-up about the briefing..."
+                  disabled={isChatting}
+                />
+                <button 
+                  className="btn-chat" 
+                  onClick={handleChatSubmit}
+                  disabled={isChatting || !chatInput.trim()}
+                >
+                  Send
+                </button>
+              </div>
+              {chatError && <div className="chat-error">{chatError}</div>}
             </div>
-            {chatError && <div className="chat-error">{chatError}</div>}
+          )}
+        </main>
+
+        <aside className="right-sidebar">
+          <div className="diagnostics-panel">
+            <div className="diagnostics-header">
+              <h3>System Diagnostics</h3>
+            </div>
+            
+            {PipelineProgress()}
+
+            {error && (
+              <div className="error-panel diagnostic-card fade-in">
+                <h4>Diagnostic Error</h4>
+                <p>{error}</p>
+              </div>
+            )}
           </div>
-        )}
-      </main>
+
+          {cacheId && (
+            <div className="eval-sidebar-panel fade-in">
+              {EvalDiagnosticsPanel()}
+            </div>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }
