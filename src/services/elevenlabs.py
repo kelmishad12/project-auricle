@@ -42,6 +42,6 @@ class ElevenLabsService(AudioSynthesisProvider):
                 voice_id="hpp4J3VqNfWAUOO0d1Us",  # Default free tier voice
                 model_id=self.model_id,
             )
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             print(f"ElevenLabs Streaming Error: {e}")
             yield b"Audio stream failed (Quota Exceeded or Invalid Key)"
